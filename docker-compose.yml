@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: financial_steward
+      POSTGRES_USER: financial
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_development_only}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - finance_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U financial -d financial_steward"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  api:
+    build: ./backend
+    environment:
+      APP_ENV: development
+      PORT: "8080"
+      DATABASE_URL: postgres://financial:${POSTGRES_PASSWORD:-local_development_only}@postgres:5432/financial_steward?sslmode=disable
+      CORS_ORIGINS: http://localhost:5173,http://localhost:4173,capacitor://localhost,http://localhost
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
+  finance_postgres:

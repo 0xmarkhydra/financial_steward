@@ -1,0 +1,8 @@
+node_modules
+dist
+ios
+android
+.git
+.env
+.env.*
+backend

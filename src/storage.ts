@@ -1,4 +1,4 @@
-import type { FinanceData, Debt, Transaction, Payment, Budget, Preferences } from './types';
+import type { FinanceData, Debt, Transaction, Payment, Budget, Preferences, Rollover } from './types';
 import { EMPTY_DATA, DEBT_KINDS } from './types';
 export const STORAGE_KEY = 'financial-steward-v1';
 const obj=(x:unknown): x is Record<string,unknown>=>typeof x==='object'&&x!==null&&!Array.isArray(x);
@@ -17,6 +17,7 @@ function validPayment(p:unknown):p is Payment {
 }
 function validBudget(b:unknown):b is Budget {return obj(b)&&str(b.category,100)&&num(b.limit);}
 function validPreferences(p:unknown):p is Preferences {return obj(p)&&num(p.monthlyIncome)&&num(p.essentials)&&num(p.reserve)&&(p.strategy==='avalanche'||p.strategy==='snowball');}
+function validRollover(v:unknown):v is Rollover{return obj(v)&&id(v.id)&&id(v.debtId)&&(v.kind==='card'||v.kind==='loan')&&date(v.dueDate)&&num(v.amount)&&v.amount>0&&num(v.fee)&&['own','bank_transfer','refinance','other'].includes(String(v.funding))&&['planned','completed','cancelled'].includes(String(v.status))&&(v.completedAt===''||date(v.completedAt))&&str(v.note,2000);}
 export function parseData(input:unknown):FinanceData {
   if(!obj(input)||input.version!==1||!Array.isArray(input.debts)||!Array.isArray(input.transactions)||!Array.isArray(input.payments)||!Array.isArray(input.budgets)||!validPreferences(input.preferences)) throw new Error('Tệp không đúng định dạng Financial Steward.');
   if(input.debts.length>10000||input.transactions.length>100000||input.payments.length>100000||input.budgets.length>1000)throw new Error('Tệp dữ liệu vượt giới hạn.');
@@ -25,7 +26,9 @@ export function parseData(input:unknown):FinanceData {
   const uniques=(ids:string[])=>new Set(ids).size===ids.length;
   if(!uniques(debts.map(d=>d.id))||!uniques(transactions.map(t=>t.id))||!uniques(payments.map(p=>p.id))||!uniques(budgets.map(b=>b.category)))throw new Error('Tệp có bản ghi trùng lặp.');
   if(payments.some(p=>!debts.some(d=>d.id===p.debtId)))throw new Error('Có thanh toán không thuộc khoản nợ nào.');
-  return {version:1,debts,transactions,payments,budgets,preferences:input.preferences as Preferences};
+  const rollovers=input.rollovers===undefined?[]:input.rollovers;
+  if(!Array.isArray(rollovers)||rollovers.length>10000||!rollovers.every(validRollover)||!uniques(rollovers.map(v=>v.id))||rollovers.some(v=>!debts.some(d=>d.id===v.debtId)))throw new Error('Dữ liệu đáo hạn không hợp lệ.');
+  return {version:1,debts,transactions,payments,budgets,preferences:input.preferences as Preferences,rollovers};
 }
 export function loadData():FinanceData {
   try {const raw=localStorage.getItem(STORAGE_KEY);return raw?parseData(JSON.parse(raw)):structuredClone(EMPTY_DATA);}

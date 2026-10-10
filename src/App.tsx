@@ -14,12 +14,16 @@ import type { Debt, DebtKind, EntryType, FinanceData, Transaction } from './type
 import { DEBT_KINDS, EMPTY_DATA, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from './types';
 import { addMonths, dateLabel, daysUntil, debtOrder, dueDate, forecast, lastMonths, localISO, money, monthStats, shortMoney, spendByCategory, thisMonth, total } from './finance';
 import { exportData, parseData } from './storage';
+import RolloverPage from './RolloverPage';
+import AgentPage from './AgentPage';
 
-type Page='overview'|'debts'|'transactions'|'budgets'|'plan'|'settings';
+type Page='overview'|'debts'|'rollovers'|'agent'|'transactions'|'budgets'|'plan'|'settings';
 type Modal='debt'|'transaction'|'payment'|'budget'|'account'|null;
 const NAV: {id:Page; label:string; icon:typeof LayoutDashboard}[]=[
   {id:'overview',label:'Tổng quan',icon:LayoutDashboard},
   {id:'debts',label:'Khoản nợ',icon:CreditCard},
+  {id:'rollovers',label:'Đáo hạn thẻ & nợ',icon:CalendarDays},
+  {id:'agent',label:'Trợ lý AI',icon:Sparkles},
   {id:'transactions',label:'Thu & chi',icon:ArrowLeftRight},
   {id:'budgets',label:'Ngân sách',icon:PiggyBank},
   {id:'plan',label:'Kế hoạch trả nợ',icon:Target},
@@ -122,7 +126,7 @@ export default function App({initialData,persist,accountEmail,onLogout,onDeleteA
     if(!Number.isFinite(limit)||limit<0){setToast('Hạn mức không hợp lệ.');return;}
     setData(prev=>({...prev,budgets:[...prev.budgets.filter(b=>b.category!==category),{category,limit}]}));success('Đã lưu ngân sách.');
   }
-  function removeDebt(d:Debt){if(!window.confirm('Xóa khoản nợ "'+d.name+'" và toàn bộ lịch sử thanh toán của khoản này? Không thể hoàn tác.'))return;setData(prev=>({...prev,debts:prev.debts.filter(x=>x.id!==d.id),payments:prev.payments.filter(p=>p.debtId!==d.id)}));setToast('Đã xóa khoản nợ.');}
+  function removeDebt(d:Debt){if(!window.confirm('Xóa khoản nợ "'+d.name+'" và toàn bộ lịch sử thanh toán của khoản này? Không thể hoàn tác.'))return;setData(prev=>({...prev,debts:prev.debts.filter(x=>x.id!==d.id),payments:prev.payments.filter(p=>p.debtId!==d.id),rollovers:(prev.rollovers||[]).filter(r=>r.debtId!==d.id)}));setToast('Đã xóa khoản nợ.');}
   function removeTransaction(t:Transaction){if(!window.confirm('Xóa giao dịch này?'))return;setData(prev=>({...prev,transactions:prev.transactions.filter(x=>x.id!==t.id)}));setToast('Đã xóa giao dịch.');}
   function removePayment(id:string){const p=data.payments.find(p=>p.id===id);if(!p||!window.confirm('Xóa thanh toán này? Phần gốc sẽ được cộng lại vào dư nợ.'))return;setData(prev=>({...prev,payments:prev.payments.filter(x=>x.id!==id),debts:prev.debts.map(d=>d.id===p.debtId?{...d,balance:d.balance+p.principal}:d)}));setToast('Đã hoàn tác thanh toán.');}
   async function importBackup(file:File|undefined){
@@ -164,6 +168,8 @@ export default function App({initialData,persist,accountEmail,onLogout,onDeleteA
         </div>
         <section className="panel recent-panel"><SectionHeading eyebrow="HOẠT ĐỘNG" title="Giao dịch gần đây" action={<button className="text-button" onClick={()=>goto('transactions')}>Xem chi tiết <ChevronRight size={16}/></button>}/><TransactionList transactions={[...data.transactions].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5)} onEdit={t=>open('transaction',t.id)} onRemove={removeTransaction} displayMoney={displayMoney}/></section>
       </>}
+      {page==='rollovers'&&<RolloverPage data={data} onChange={setData}/>}
+      {page==='agent'&&<AgentPage data={data}/>}
       {page==='debts'&&<>
         <div className="page-heading"><div><div className="eyebrow">QUẢN LÝ CÔNG NỢ</div><h1>Tất cả khoản nợ</h1><p>Ghi lại từng khoản vay, theo dõi dư nợ và thanh toán đúng hạn.</p></div><button className="btn primary" onClick={()=>open('debt')}><Plus size={17}/> Thêm khoản nợ</button></div>
         <div className="stats-grid triple"><StatCard icon={<Wallet size={19}/>} label="Tổng dư nợ" value={displayMoney(debtTotal)} detail={activeDebts.length+' khoản đang có dư nợ'} tone="red"/><StatCard icon={<CalendarDays size={19}/>} label="Thanh toán tối thiểu" value={displayMoney(minTotal)} detail="Tổng các khoản mỗi tháng" tone="orange"/><StatCard icon={<CheckCircle2 size={19}/>} label="Đã trả vào gốc" value={displayMoney(total(data.payments.map(p=>p.principal)))} detail="Tích lũy từ khi ghi nhận" tone="green"/></div>

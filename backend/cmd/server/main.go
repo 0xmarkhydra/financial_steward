@@ -113,6 +113,7 @@ func run() error {
 	mux.HandleFunc("GET /api/v1/me", a.withAuth(a.me))
 	mux.HandleFunc("DELETE /api/v1/account", a.withAuth(a.deleteAccount))
 	mux.HandleFunc("GET /api/v1/state", a.withAuth(a.getState))
+	mux.HandleFunc("POST /mcp", a.withAuth(a.mcp))
 	mux.HandleFunc("PUT /api/v1/state", a.withAuth(a.putState))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { fail(w, 404, "Không tìm thấy API.") })
 	addr := ":" + getenv("PORT", "8080")
@@ -214,7 +215,7 @@ func (a *server) middleware(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		if r.URL.Path != "/healthz" && !strings.HasPrefix(r.URL.Path, "/api/v1/") {
+		if r.URL.Path != "/healthz" && r.URL.Path != "/mcp" && !strings.HasPrefix(r.URL.Path, "/api/v1/") {
 			fail(w, 404, "Not found")
 			return
 		}

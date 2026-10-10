@@ -1,6 +1,8 @@
 import {describe,it,expect} from 'vitest';
 import { debtOrder,forecast,monthStats,dueDate,daysUntil } from './finance';
 import {parseData} from './storage';
+import { analyzeFinance } from './AgentPage';
+import { localISO } from './finance';
 import type {Debt,FinanceData} from './types';
 import {EMPTY_DATA} from './types';
 const debt=(id:string,balance:number,apr:number,minimum=200000):Debt=>({id,name:id,lender:'',kind:'bank',original:balance,balance,apr,minimum,dueDay:31,createdAt:'2026-01-01',note:''});
@@ -22,5 +24,22 @@ describe('financial accounting',()=>{
  it('rejects malformed backup and invalid debt references',()=>{
  expect(()=>parseData({version:2})).toThrow();
  expect(()=>parseData({...structuredClone(EMPTY_DATA),payments:[{id:'p',debtId:'missing',date:'2026-10-04',principal:1,interest:0,fee:0,note:''}]})).toThrow();
+ });
+});
+describe('agent and rollover business cases',()=>{
+ it('warns about monthly minimum debt shortfall and due rollover',()=>{
+  const data:FinanceData={...structuredClone(EMPTY_DATA),
+   debts:[debt('card',5000000,24,3000000)],
+   preferences:{monthlyIncome:4000000,essentials:2000000,reserve:1000000,strategy:'avalanche'},
+   rollovers:[{id:'rollover',debtId:'card',kind:'card',dueDate:localISO(),amount:2000000,fee:150000,funding:'own',status:'planned',completedAt:'',note:''}]
+  };
+  const warnings=analyzeFinance(data).map(x=>x.title);
+  expect(warnings).toContain('Thiếu ngân sách trả nợ tối thiểu');
+  expect(warnings.some(x=>x.includes('Đáo hạn'))).toBe(true);
+  expect(warnings).toContain('Ngân sách chi tiêu linh hoạt');
+ });
+ it('validates a rollover debt reference',()=>{
+  const record={id:'rollover',debtId:'missing',kind:'card',dueDate:'2026-10-10',amount:100000,fee:0,funding:'own',status:'planned',completedAt:'',note:''};
+  expect(()=>parseData({...structuredClone(EMPTY_DATA),rollovers:[record]})).toThrow(/đáo hạn/);
  });
 });

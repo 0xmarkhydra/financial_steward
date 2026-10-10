@@ -54,12 +54,25 @@ type Preferences struct {
 	Reserve       float64 `json:"reserve"`
 	Strategy      string  `json:"strategy"`
 }
+type Rollover struct {
+	ID          string  `json:"id"`
+	DebtID      string  `json:"debtId"`
+	Kind        string  `json:"kind"`
+	DueDate     string  `json:"dueDate"`
+	Amount      float64 `json:"amount"`
+	Fee         float64 `json:"fee"`
+	Funding     string  `json:"funding"`
+	Status      string  `json:"status"`
+	CompletedAt string  `json:"completedAt"`
+	Note        string  `json:"note"`
+}
 type Data struct {
 	Version      int           `json:"version"`
 	Debts        []Debt        `json:"debts"`
 	Transactions []Transaction `json:"transactions"`
 	Payments     []Payment     `json:"payments"`
 	Budgets      []Budget      `json:"budgets"`
+	Rollovers    []Rollover    `json:"rollovers,omitempty"`
 	Preferences  Preferences   `json:"preferences"`
 }
 
@@ -136,6 +149,24 @@ func (d Data) Validate() error {
 	for _, v := range d.Debts {
 		if math.Abs((v.Balance+totals[v.ID])-v.Original) > 1 {
 			return errors.New("debt principal does not reconcile with payment history")
+		}
+	}
+	ids = map[string]bool{}
+	if len(d.Rollovers) > 10000 {
+		return errors.New("too many rollover records")
+	}
+	for _, v := range d.Rollovers {
+		if !unique(ids, v.ID) || !containsDebt(d.Debts, v.DebtID) || !validDate(v.DueDate) || !amount(v.Amount) || v.Amount == 0 || !amount(v.Fee) || len(v.Note) > 2000 || (v.CompletedAt != "" && !validDate(v.CompletedAt)) {
+			return errors.New("invalid rollover")
+		}
+		if v.Kind != "card" && v.Kind != "loan" {
+			return errors.New("invalid rollover kind")
+		}
+		if v.Funding != "own" && v.Funding != "bank_transfer" && v.Funding != "refinance" && v.Funding != "other" {
+			return errors.New("invalid rollover funding")
+		}
+		if v.Status != "planned" && v.Status != "completed" && v.Status != "cancelled" {
+			return errors.New("invalid rollover status")
 		}
 	}
 	ids = map[string]bool{}

@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run",
+    "smoke:staging": "node scripts/staging-smoke.mjs",
     "mobile:sync": "npm run build && npx cap sync",
     "mobile:ios": "npx cap open ios",
     "mobile:android": "npx cap open android"

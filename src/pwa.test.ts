@@ -16,6 +16,13 @@ describe('installable web PWA', () => {
     expect(page).toContain('rel="manifest"');
     expect(page).toContain('apple-touch-icon');
   });
+  it('includes a clearly marked MCP guide', () => {
+    const app=readFileSync(path('src/App.tsx'),'utf8');
+    const guide=readFileSync(path('src/MCPPage.tsx'),'utf8');
+    expect(app).toContain("label:'Kết nối ChatGPT'");
+    expect(guide).toContain('Chưa sẵn sàng kết nối trực tiếp ChatGPT');
+    expect(guide).toContain('tools/list');
+  });
   it('ships valid PNG icons for install and iOS', () => {
     for (const icon of manifest.icons as { src: string; sizes: string }[]) {
       const png = readFileSync(path('public' + icon.src));

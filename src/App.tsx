@@ -7,7 +7,7 @@ import {
   Download, FileClock, HandCoins, Landmark, LayoutDashboard, Menu,
   MoreHorizontal, Pencil, PiggyBank, Plus, ReceiptText, Search,
   Settings2, ShieldCheck, Sparkles, Target, Trash2, TrendingDown,
-  Upload, Wallet, X
+  Upload, Wallet, X, Link2
 } from 'lucide-react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Debt, DebtKind, EntryType, FinanceData, Transaction } from './types';
@@ -16,14 +16,16 @@ import { addMonths, dateLabel, daysUntil, debtOrder, dueDate, forecast, lastMont
 import { exportData, parseData } from './storage';
 import RolloverPage from './RolloverPage';
 import AgentPage from './AgentPage';
+import MCPPage from './MCPPage';
 
-type Page='overview'|'debts'|'rollovers'|'agent'|'transactions'|'budgets'|'plan'|'settings';
+type Page='overview'|'debts'|'rollovers'|'agent'|'mcp'|'transactions'|'budgets'|'plan'|'settings';
 type Modal='debt'|'transaction'|'payment'|'budget'|'account'|null;
 const NAV: {id:Page; label:string; icon:typeof LayoutDashboard}[]=[
   {id:'overview',label:'Tổng quan',icon:LayoutDashboard},
   {id:'debts',label:'Khoản nợ',icon:CreditCard},
   {id:'rollovers',label:'Đáo hạn thẻ & nợ',icon:CalendarDays},
   {id:'agent',label:'Trợ lý AI',icon:Sparkles},
+  {id:'mcp',label:'Kết nối ChatGPT',icon:Link2},
   {id:'transactions',label:'Thu & chi',icon:ArrowLeftRight},
   {id:'budgets',label:'Ngân sách',icon:PiggyBank},
   {id:'plan',label:'Kế hoạch trả nợ',icon:Target},
@@ -149,6 +151,7 @@ export default function App({initialData,persist,accountEmail,onLogout,onDeleteA
     <div className="main-wrap">
       <header className="topbar"><div className="top-left"><button aria-label="Mở menu" className="icon-btn mobile-only" onClick={()=>setSideOpen(true)}><Menu size={22}/></button><div className="breadcrumb"><span>Không gian tài chính</span><ChevronRight size={15}/><strong>{NAV.find(v=>v.id===page)?.label}</strong></div></div><div className="top-actions"><button className="icon-btn" title="Ẩn/hiện số tiền" aria-label="Ẩn hoặc hiện số tiền" onClick={()=>setShowBalances(v=>!v)}>{showBalances?<Eye size={18}/>:<EyeOff size={18}/>}</button><div className="month-select"><CalendarDays size={16}/><input aria-label="Chọn tháng" type="month" value={month} onChange={e=>setMonth(e.target.value||thisMonth())}/></div><button className="header-add" onClick={()=>open('transaction')}><Plus size={18}/><span>Ghi giao dịch</span></button></div></header>
       <main className="content">
+      {window.location.hostname.includes('staging')&&<div className="staging-app-banner" role="note"><CircleAlert size={15}/> Môi trường thử nghiệm — không nhập dữ liệu tài chính thật hoặc thông tin nhạy cảm.</div>}
       {page==='overview'&&<>
         <div className="welcome-row"><div><div className="eyebrow">BẢNG ĐIỀU KHIỂN CỦA BẠN</div><h1>Tổng quan tài chính <span className="wave">✳</span></h1><p>Theo dõi dòng tiền, kiểm soát các khoản nợ và chủ động từng quyết định.</p></div><button className="btn outline desktop-action" onClick={()=>goto('plan')}><Target size={17}/> Lập kế hoạch trả nợ <ChevronRight size={15}/></button></div>
         {allEmpty&&<div className="start-banner"><div className="start-icon"><Sparkles size={22}/></div><div><strong>Bắt đầu từ bức tranh tài chính hiện tại</strong><p>Thêm các khoản nợ và thu chi đầu tiên. Ứng dụng sẽ tự tính toán tổng hợp và gợi ý kế hoạch thanh toán.</p></div><div className="start-buttons"><button className="btn light" onClick={()=>open('debt')}><Plus size={16}/> Thêm khoản nợ</button><button className="btn ghost-light" onClick={()=>open('transaction')}>Ghi thu chi <ArrowRight size={16}/></button></div></div>}
@@ -170,6 +173,7 @@ export default function App({initialData,persist,accountEmail,onLogout,onDeleteA
       </>}
       {page==='rollovers'&&<RolloverPage data={data} onChange={setData}/>}
       {page==='agent'&&<AgentPage data={data}/>}
+      {page==='mcp'&&<MCPPage/>}
       {page==='debts'&&<>
         <div className="page-heading"><div><div className="eyebrow">QUẢN LÝ CÔNG NỢ</div><h1>Tất cả khoản nợ</h1><p>Ghi lại từng khoản vay, theo dõi dư nợ và thanh toán đúng hạn.</p></div><button className="btn primary" onClick={()=>open('debt')}><Plus size={17}/> Thêm khoản nợ</button></div>
         <div className="stats-grid triple"><StatCard icon={<Wallet size={19}/>} label="Tổng dư nợ" value={displayMoney(debtTotal)} detail={activeDebts.length+' khoản đang có dư nợ'} tone="red"/><StatCard icon={<CalendarDays size={19}/>} label="Thanh toán tối thiểu" value={displayMoney(minTotal)} detail="Tổng các khoản mỗi tháng" tone="orange"/><StatCard icon={<CheckCircle2 size={19}/>} label="Đã trả vào gốc" value={displayMoney(total(data.payments.map(p=>p.principal)))} detail="Tích lũy từ khi ghi nhận" tone="green"/></div>

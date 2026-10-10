@@ -27,8 +27,17 @@ railway deployment list --service api --environment staging --json
 railway deployment list --service frontend --environment staging --json
 ```
 
-Before the next release:
-- Verify `/healthz`, manifest, Service Worker, CORS preflight and browser login with a test account, no real financial data.
-- Make sure Postgres volume is mounted and backups are configured before production.
-- Add email verification, password recovery, MFA, distributed auth rate limits and production monitoring before exposing to personal financial data.
-- This is a staging environment, not an approval to operate with real customer finance records.
+## Staging acceptance checks
+
+Run `npm run smoke:staging` to execute 11 automated integration checks against HTTPS frontend, API, PostgreSQL, login, logout, revision-conflict protection, PWA assets and CORS. The disposable account is deleted automatically. Run the same suite manually via the GitHub Actions `Staging integration smoke test` workflow (`workflow_dispatch`).
+
+On iPhone, open the staging website in Safari, use Share > Add to Home Screen, launch the standalone app and test login and navigation on the actual device. Chrome Android: choose Install app. There is no connected mobile test device at present, so real-device install testing remains an acceptance gate.
+
+## Deployment gates / unfinished dependencies
+
+- PostgreSQL has a mounted persistent volume, but point-in-time recovery is **not enabled**; confirm and provision a backup plan before production. Do not assume persistence is a backup.
+- Email verification, password reset, MFA, shared/distributed auth throttling and operational monitoring still require implementation and (for emails) a provider integration.
+- Do not store real financial information in staging. The login screen displays an explicit staging warning.
+- Do not automatically connect the API service to GitHub without first setting its repo root to `/backend`; current deployments use explicit `railway up` to avoid a broken root-path build.
+- API integration tests use synthetic accounts only; device-specific installation, notifications and accessibility still need testing.
+- `APP_ENV=production` on staging enables server security checks but does not mean production approval.

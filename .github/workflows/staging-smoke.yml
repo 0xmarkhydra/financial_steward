@@ -1,0 +1,23 @@
+name: Staging integration smoke test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  staging-smoke:
+    name: Staging PWA + API + PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify deployed staging and automatically remove test account
+        run: node scripts/staging-smoke.mjs
+        env:
+          SMOKE_WEB_URL: https://frontend-staging-2146.up.railway.app
+          SMOKE_API_URL: https://api-staging-706c3.up.railway.app

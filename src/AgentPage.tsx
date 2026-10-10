@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Bot, ShieldCheck, AlertTriangle, TrendingDown } from 'lucide-react';
 import type { FinanceData } from './types';
+import { analyzeSpending } from './spendingCoach';
 import { daysUntil, debtOrder, forecast, localISO, money, monthStats, thisMonth } from './finance';
 type Finding={level:'high'|'medium'|'info';title:string;detail:string};
 export function analyzeFinance(data:FinanceData):Finding[]{
@@ -9,6 +10,9 @@ export function analyzeFinance(data:FinanceData):Finding[]{
  const minimum=active.reduce((s,d)=>s+Math.min(d.minimum,d.balance),0);
  const budget=Math.max(0,data.preferences.monthlyIncome-data.preferences.essentials-data.preferences.reserve);
  const findings:Finding[]=[];
+ const coach=analyzeSpending(data,today);
+ for(const item of coach.alerts){findings.push({level:item.level,title:item.title,detail:item.detail});}
+ if(coach.configured)findings.push({level:'info',title:'Hạn mức chi linh hoạt mỗi ngày',detail:'Để bảo vệ quỹ dự phòng và nghĩa vụ trả nợ, tham khảo mức '+money(coach.dailyFlexible)+'/ngày trong '+coach.daysLeft+' ngày còn lại của tháng. Số liệu dựa trên thu chi bạn tự nhập.'});
  const free=data.preferences.monthlyIncome-data.preferences.essentials-data.preferences.reserve-minimum;
  if(data.preferences.monthlyIncome>0){findings.push({level:free<0?'high':'info',title:'Ngân sách chi tiêu linh hoạt',detail:free<0?'Ngân sách dự kiến thiếu '+money(-free)+' sau khi giữ tiền sinh hoạt, dự phòng và trả nợ tối thiểu. Không nên tăng chi tiêu tùy ý.':'Có thể phân bổ tối đa '+money(free)+' trong tháng cho các khoản không thiết yếu, trước khi trừ các khoản phát sinh khác. Đây không phải số dư tài khoản thực tế.'});}
  const recurring=data.debts.filter(d=>d.balance>0&&d.minimum>0);

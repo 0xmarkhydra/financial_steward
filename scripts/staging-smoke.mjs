@@ -83,7 +83,7 @@ try {
     const toolList=await call('tools/list');
     const names=toolList.data.result?.tools?.map(t=>t.name);
     expected(toolList.status===200 && Array.isArray(names),'MCP tool listing invalid');
-    for (const name of ['get_financial_summary','list_upcoming_payments','suggest_spending_budget']) {
+    for (const name of ['get_financial_summary','list_upcoming_payments','suggest_spending_budget','analyze_spending_behavior']) {
       expected(names.includes(name),'Missing MCP tool '+name);
       const result=await call('tools/call',{name,arguments:{}});
       expected(result.status===200 && result.data.result?.content?.[0]?.type==='text','MCP tool call failed '+name);
@@ -92,12 +92,19 @@ try {
     }
   });
   await check('Persist and reload finance transaction', async () => {
-    const item={id:crypto.randomUUID(),type:'expense',amount:12500,category:'Khác',date:'2026-10-10',note:'Disposable staging smoke test'};
+    const item={id:crypto.randomUUID(),type:'expense',amount:12500,category:'Khác',date:'2026-10-10',note:'Disposable staging smoke test',need:'flexible',trigger:'impulse'};
     const updated={...state.data,transactions:[...state.data.transactions,item]};
     const save=await request('/api/v1/state','PUT',{data:updated,revision:state.revision});
     expected(save.status===200 && save.data.revision===state.revision+1,'State save failed');
     const reload=await request('/api/v1/state');
-    expected(reload.status===200 && reload.data.data.transactions.some(t=>t.id===item.id),'State not persisted');
+    expected(reload.status===200 && reload.data.data.transactions.some(t=>t.id===item.id && t.need==='flexible' && t.trigger==='impulse'),'Behavior metadata not persisted');
+  });
+  await check('MCP spending coach aggregates behavior without notes', async () => {
+    const r=await request('/mcp','POST',{jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'analyze_spending_behavior',arguments:{}}});
+    expected(r.status===200 && r.data.result?.content?.[0]?.text,'MCP spending data missing');
+    const output=JSON.parse(r.data.result.content[0].text);
+    expected(output.impulsiveOrEmotionDrivenSpent>=12500,'MCP failed to aggregate impulse spending');
+    expected(!JSON.stringify(output).includes('Disposable staging smoke test'),'MCP leaked raw note');
   });
   await check('Stale revision update blocked', async () => {
     const r=await request('/api/v1/state','PUT',{data:state.data,revision:state.revision});

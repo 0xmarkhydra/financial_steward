@@ -54,6 +54,7 @@ func (a *server) mcp(w http.ResponseWriter, r *http.Request, s session) {
 			map[string]any{"name": "get_financial_summary", "description": "Read-only financial summary for the authenticated account; amounts in VND.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}, "additionalProperties": false}},
 			map[string]any{"name": "list_upcoming_payments", "description": "Read-only upcoming debt and rollover deadlines, 30 days. Dates are approximate for recurring debts.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}, "additionalProperties": false}},
 			map[string]any{"name": "suggest_spending_budget", "description": "Read-only budget guidance using user-provided monthly income, essentials, reserve and debt minimums.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}, "additionalProperties": false}},
+			map[string]any{"name": "analyze_spending_behavior", "description": "Read-only aggregated spending habits and estimated discretionary budget; never returns raw transaction notes.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}, "additionalProperties": false}},
 		}}
 	case "tools/call":
 		var p struct {
@@ -64,7 +65,7 @@ func (a *server) mcp(w http.ResponseWriter, r *http.Request, s session) {
 			response(w, 200, mcpResponse{JSONRPC: "2.0", ID: req.ID, Error: map[string]any{"code": -32602, "message": "Invalid params"}})
 			return
 		}
-		if p.Name != "get_financial_summary" && p.Name != "list_upcoming_payments" && p.Name != "suggest_spending_budget" {
+		if p.Name != "get_financial_summary" && p.Name != "list_upcoming_payments" && p.Name != "suggest_spending_budget" && p.Name != "analyze_spending_behavior" {
 			response(w, 200, mcpResponse{JSONRPC: "2.0", ID: req.ID, Error: map[string]any{"code": -32602, "message": "Unknown tool"}})
 			return
 		}
@@ -111,6 +112,9 @@ func mcpFinanceOutputAt(d finance.Data, tool string, now time.Time) any {
 			minimum = v.Balance
 		}
 		minTotal += minimum
+	}
+	if tool == "analyze_spending_behavior" {
+		return spendingBehaviorMCP(d, now, minTotal)
 	}
 	if tool == "get_financial_summary" {
 		income, expense, paid := 0.0, 0.0, 0.0

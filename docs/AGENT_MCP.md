@@ -3,14 +3,14 @@
 ## Implemented
 - In-app rule-based financial agent: debt priority, repayment projection, debt rollover risks, upcoming deadlines, negative cash flow, minimum-payment shortfall. No external LLM calls.
 - Rollover planner: track due dates, fees, funding sources and status. Completing a rollover does NOT change principal automatically.
-- Go JSON-RPC endpoint POST /mcp with three **read-only** tools: get_financial_summary, list_upcoming_payments, suggest_spending_budget.
+- Go JSON-RPC endpoint POST /mcp with four **read-only** tools: get_financial_summary, list_upcoming_payments, suggest_spending_budget and analyze_spending_behavior. The new tool summarizes spending patterns without exposing notes or individual transaction IDs.
 - Every /mcp request requires the existing account bearer token and reads ONLY that account's finance state. Never expose bearer tokens in prompts, logs or public repositories.
 
 ## NOT YET READY FOR CHATGPT REMOTE MCP CONNECTION
 This is an authenticated JSON-RPC/MCP foundation, not a production ChatGPT connector. Before publishing, implement standards-compliant Streamable HTTP MCP transport (including protocol/session negotiation and required headers), OAuth 2.1 authorization code + PKCE with authorization-server metadata, per-tool scope/consent, audience validation, HTTPS and security tests. ChatGPT must authorize each account; never use a shared API token.
 
 ## Web guide and developer validation
-The Quản gia web sidebar now includes **Kết nối ChatGPT**, with a clearly marked connection status, developer MCP endpoint, setup prerequisites, real-time authenticated `tools/list` diagnostics, and the three read-only tools.
+The Quản gia web sidebar now includes **Kết nối ChatGPT**, with a clearly marked connection status, developer MCP endpoint, setup prerequisites, real-time authenticated `tools/list` diagnostics, and the four read-only tools.
 
 Run `npm run smoke:staging` to verify all MCP tools with an automatically deleted test account as part of the Railway integration test. **Successful internal tests do not mean ChatGPT can connect.**
 

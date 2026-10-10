@@ -24,6 +24,12 @@ const TOOLS = [
     detail: 'Ước lượng khoản có thể chi tiêu từ thu nhập, sinh hoạt thiết yếu, dự phòng và trả nợ tối thiểu.',
     example: 'Tôi được phép chi tiêu thêm bao nhiêu trong tháng?',
   },
+  {
+    name: 'analyze_spending_behavior',
+    title: 'Phân tích hành vi chi tiêu',
+    detail: 'Phân tích chi thiết yếu, chi linh hoạt, khoản mua bốc đồng và gợi ý mức chi tháng/ngày dựa trên dữ liệu đã gắn nhãn.',
+    example: 'Tôi đang có thói quen chi tiêu nào cần điều chỉnh?',
+  },
 ];
 const HELP = 'https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt';
 
@@ -72,14 +78,14 @@ export default function MCPPage() {
       <div className="mcp-status-icon"><LockKeyhole size={22}/></div>
       <div>
         <strong>Chưa sẵn sàng kết nối trực tiếp ChatGPT</strong>
-        <p>Backend đã có 3 công cụ MCP đọc dữ liệu và kiểm tra tài khoản qua token phiên. Tuy nhiên máy chủ chưa triển khai OAuth 2.1 với PKCE và đầy đủ giao thức Streamable HTTP cho ChatGPT. Hiện chưa thể nhấn “Kết nối ChatGPT” để sử dụng.</p>
+        <p>Backend đã có 4 công cụ MCP đọc dữ liệu và kiểm tra tài khoản qua token phiên. Tuy nhiên máy chủ chưa triển khai OAuth 2.1 với PKCE và đầy đủ giao thức Streamable HTTP cho ChatGPT. Hiện chưa thể nhấn “Kết nối ChatGPT” để sử dụng.</p>
         <small>Không sao chép access token, mật khẩu ngân hàng, số thẻ hay OTP sang ChatGPT hoặc cấu hình của bên thứ ba.</small>
       </div>
     </section>
 
     <section className="panel mcp-panel">
       <div className="mcp-panel-heading">
-        <div><div className="eyebrow">CÔNG CỤ ĐÃ TRIỂN KHAI</div><h2>3 chức năng MCP hiện có</h2></div>
+        <div><div className="eyebrow">CÔNG CỤ ĐÃ TRIỂN KHAI</div><h2>4 chức năng MCP hiện có</h2></div>
         <button className="btn outline" type="button" disabled={loading} onClick={() => void testTools()}><RefreshCw size={16}/>{loading ? 'Đang kiểm tra...' : 'Kiểm tra MCP'}</button>
       </div>
       <div className="mcp-tool-grid">

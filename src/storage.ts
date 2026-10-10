@@ -10,7 +10,9 @@ function validDebt(d:unknown): d is Debt {
   return obj(d)&&id(d.id)&&str(d.name,140)&&str(d.lender,140)&&typeof d.kind==='string'&&d.kind in DEBT_KINDS&&num(d.original)&&num(d.balance)&&d.balance<=d.original&&num(d.apr)&&d.apr<=1000&&num(d.minimum)&&typeof d.dueDay==='number'&&Number.isInteger(d.dueDay)&&d.dueDay>=1&&d.dueDay<=31&&date(d.createdAt)&&str(d.note,2000);
 }
 function validTransaction(t:unknown):t is Transaction {
-  return obj(t)&&id(t.id)&&(t.type==='income'||t.type==='expense')&&num(t.amount)&&t.amount>0&&str(t.category,100)&&date(t.date)&&str(t.note,2000);
+  return obj(t)&&id(t.id)&&(t.type==='income'||t.type==='expense')&&num(t.amount)&&t.amount>0&&str(t.category,100)&&date(t.date)&&str(t.note,2000)&&
+    (t.need===undefined||(t.type==='expense'&&['essential','flexible'].includes(String(t.need))))&&
+    (t.trigger===undefined||(t.type==='expense'&&['planned','impulse','promotion','emotion','social'].includes(String(t.trigger))));
 }
 function validPayment(p:unknown):p is Payment {
   return obj(p)&&id(p.id)&&id(p.debtId)&&date(p.date)&&num(p.principal)&&num(p.interest)&&num(p.fee)&&p.principal+p.interest+p.fee>0&&str(p.note,2000);

@@ -2,7 +2,9 @@ export type EntryType = 'income' | 'expense';
 export type DebtKind = 'bank' | 'card' | 'personal' | 'installment' | 'other';
 export type Strategy = 'avalanche' | 'snowball';
 export interface Debt { id: string; name: string; lender: string; kind: DebtKind; original: number; balance: number; apr: number; minimum: number; dueDay: number; createdAt: string; note: string; }
-export interface Transaction { id: string; type: EntryType; amount: number; category: string; date: string; note: string; }
+export type SpendingNeed = 'essential' | 'flexible';
+export type SpendingTrigger = 'planned' | 'impulse' | 'promotion' | 'emotion' | 'social';
+export interface Transaction { id: string; type: EntryType; amount: number; category: string; date: string; note: string; need?: SpendingNeed; trigger?: SpendingTrigger; }
 export interface Payment { id: string; debtId: string; date: string; principal: number; interest: number; fee: number; note: string; }
 export interface Budget { category: string; limit: number; }
 export interface Preferences { monthlyIncome: number; essentials: number; reserve: number; strategy: Strategy; }

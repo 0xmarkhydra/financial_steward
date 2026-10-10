@@ -34,6 +34,8 @@ type Transaction struct {
 	Category string  `json:"category"`
 	Date     string  `json:"date"`
 	Note     string  `json:"note"`
+	Need     string  `json:"need,omitempty"`
+	Trigger  string  `json:"trigger,omitempty"`
 }
 type Payment struct {
 	ID        string  `json:"id"`
@@ -132,7 +134,9 @@ func (d Data) Validate() error {
 	}
 	ids = map[string]bool{}
 	for _, v := range d.Transactions {
-		if !unique(ids, v.ID) || !validDate(v.Date) || !amount(v.Amount) || v.Amount == 0 || len(v.Note) > 2000 || v.Category == "" || len(v.Category) > 100 || (v.Type != "income" && v.Type != "expense") {
+		if !unique(ids, v.ID) || !validDate(v.Date) || !amount(v.Amount) || v.Amount == 0 || len(v.Note) > 2000 || v.Category == "" || len(v.Category) > 100 || (v.Type != "income" && v.Type != "expense") ||
+			(v.Need != "" && (v.Type != "expense" || (v.Need != "essential" && v.Need != "flexible"))) ||
+			(v.Trigger != "" && (v.Type != "expense" || (v.Trigger != "planned" && v.Trigger != "impulse" && v.Trigger != "promotion" && v.Trigger != "emotion" && v.Trigger != "social"))) {
 			return errors.New("invalid transaction record")
 		}
 	}

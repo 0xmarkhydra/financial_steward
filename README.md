@@ -17,7 +17,7 @@ financial_steward/
 │   ├── cmd/server/migrations/  Embedded PostgreSQL schema
 │   └── internal/finance/       Validate dữ liệu & test
 ├── capacitor.config.ts         iOS/Android cấu hình chung
-├── Dockerfile.web              Frontend phục vụ bằng Nginx
+├── Dockerfile                  Frontend phục vụ bằng Nginx
 ├── docker-compose.yml          API + PostgreSQL cho phát triển
 └── docs/                       Phát hành và bảo vệ dữ liệu
 ```
@@ -103,7 +103,7 @@ Không sử dụng địa chỉ `localhost` cho API mobile trên điện thoại
 
 - PostgreSQL được quản lý với backup/PITR và SSL hoặc mạng riêng tin cậy.
 - Deploy backend container từ `backend/Dockerfile`; đặt `APP_ENV=production`, `DATABASE_URL`, `CORS_ORIGINS`, `PORT`.
-- Deploy frontend từ `Dockerfile.web`, khai báo build arg `VITE_API_URL=https://api.example.com`.
+- Deploy frontend từ `Dockerfile`, khai báo build arg `VITE_API_URL=https://api.example.com`.
 - Cấu hình HTTPS, DNS cho frontend và API; đưa chính xác origin web, `capacitor://localhost` và `http://localhost` vào CORS.
 - Tạo và công bố privacy policy, chính sách xóa tài khoản trước khi phát hành. Xem `docs/RELEASE.md`.
 

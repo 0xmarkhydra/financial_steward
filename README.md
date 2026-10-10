@@ -35,6 +35,10 @@ financial_steward/
 - JSON backup / restore; tài khoản và dữ liệu đồng bộ bằng API với revision để tránh ghi đè âm thầm.
 - Responsive; chạy trên iPhone, Android và web từ một codebase.
 
+## Web PWA (ưu tiên phát hành đầu tiên)
+
+Quản gia đã có manifest, biểu tượng cài đặt Android/iOS, Service Worker lưu **chỉ tài nguyên tĩnh**, màn hình báo ngoại tuyến và nút cài ứng dụng lên màn hình chính. Truy cập trình duyệt qua **HTTPS** (hoặc localhost khi phát triển) và cài trực tiếp, chưa cần App Store/CH Play. **Giao dịch và xác thực vẫn yêu cầu Internet**; không lưu cache API hoặc dữ liệu tài chính. Xem hướng dẫn và checklist tại [`docs/WEB_PWA.md`](docs/WEB_PWA.md).
+
 ## Khởi chạy backend Go
 
 Cần **Go 1.23+** và PostgreSQL 17.

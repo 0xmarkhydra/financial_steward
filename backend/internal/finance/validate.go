@@ -15,17 +15,19 @@ const maxRecords = 100000
 const maxAmount = float64(9_000_000_000_000_000)
 
 type Debt struct {
-	ID        string  `json:"id"`
-	Name      string  `json:"name"`
-	Lender    string  `json:"lender"`
-	Kind      string  `json:"kind"`
-	Original  float64 `json:"original"`
-	Balance   float64 `json:"balance"`
-	APR       float64 `json:"apr"`
-	Minimum   float64 `json:"minimum"`
-	DueDay    int     `json:"dueDay"`
-	CreatedAt string  `json:"createdAt"`
-	Note      string  `json:"note"`
+	ID               string  `json:"id"`
+	Name             string  `json:"name"`
+	Lender           string  `json:"lender"`
+	Kind             string  `json:"kind"`
+	Original         float64 `json:"original"`
+	Balance          float64 `json:"balance"`
+	APR              float64 `json:"apr"`
+	Minimum          float64 `json:"minimum"`
+	DueDay           int     `json:"dueDay"`
+	InterestDueDay   int     `json:"interestDueDay,omitempty"`
+	InterestExpected float64 `json:"interestExpected,omitempty"`
+	CreatedAt        string  `json:"createdAt"`
+	Note             string  `json:"note"`
 }
 type Transaction struct {
 	ID       string  `json:"id"`
@@ -41,6 +43,7 @@ type Payment struct {
 	ID        string  `json:"id"`
 	DebtID    string  `json:"debtId"`
 	Date      string  `json:"date"`
+	Period    string  `json:"period,omitempty"`
 	Principal float64 `json:"principal"`
 	Interest  float64 `json:"interest"`
 	Fee       float64 `json:"fee"`
@@ -123,7 +126,7 @@ func (d Data) Validate() error {
 	totals := map[string]float64{}
 	for _, v := range d.Debts {
 		if !unique(ids, v.ID) || strings.TrimSpace(v.Name) == "" || len(v.Name) > 140 || len(v.Lender) > 140 || len(v.Note) > 2000 || !validDate(v.CreatedAt) ||
-			!amount(v.Original) || !amount(v.Balance) || v.Balance > v.Original || !amount(v.Minimum) || v.APR < 0 || v.APR > 1000 || math.IsNaN(v.APR) || math.IsInf(v.APR, 0) || v.DueDay < 1 || v.DueDay > 31 {
+			!amount(v.Original) || !amount(v.Balance) || v.Balance > v.Original || !amount(v.Minimum) || v.APR < 0 || v.APR > 1000 || math.IsNaN(v.APR) || math.IsInf(v.APR, 0) || v.DueDay < 1 || v.DueDay > 31 || (v.InterestDueDay != 0 && (v.InterestDueDay < 1 || v.InterestDueDay > 31)) || !amount(v.InterestExpected) {
 			return fmt.Errorf("invalid debt record")
 		}
 		switch v.Kind {
@@ -142,7 +145,7 @@ func (d Data) Validate() error {
 	}
 	ids = map[string]bool{}
 	for _, v := range d.Payments {
-		if !unique(ids, v.ID) || !validDate(v.Date) || !amount(v.Principal) || !amount(v.Interest) || !amount(v.Fee) || (v.Principal+v.Interest+v.Fee) <= 0 || len(v.Note) > 2000 {
+		if !unique(ids, v.ID) || !validDate(v.Date) || (v.Period != "" && (len(v.Period) != 7 || v.Period[4] != '-' || !validDate(v.Period+"-01"))) || !amount(v.Principal) || !amount(v.Interest) || !amount(v.Fee) || (v.Principal+v.Interest+v.Fee) <= 0 || len(v.Note) > 2000 {
 			return errors.New("invalid payment record")
 		}
 		if !containsDebt(d.Debts, v.DebtID) {

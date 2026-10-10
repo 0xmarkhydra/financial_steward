@@ -29,7 +29,7 @@ railway deployment list --service frontend --environment staging --json
 
 ## Staging acceptance checks
 
-Run `npm run smoke:staging` to execute 12 automated integration checks against HTTPS frontend, API, PostgreSQL, login, logout, revision-conflict protection, PWA assets and CORS. The disposable account is deleted automatically. Run the same suite manually via the GitHub Actions `Staging integration smoke test` workflow (`workflow_dispatch`).
+Run `npm run smoke:staging` to execute 14 automated integration checks against HTTPS frontend, API, PostgreSQL, login, logout, revision-conflict protection, PWA assets and CORS. The disposable account is deleted automatically. Run the same suite manually via the GitHub Actions `Staging integration smoke test` workflow (`workflow_dispatch`).
 
 On iPhone, open the staging website in Safari, use Share > Add to Home Screen, launch the standalone app and test login and navigation on the actual device. Chrome Android: choose Install app. There is no connected mobile test device at present, so real-device install testing remains an acceptance gate.
 

@@ -1,11 +1,11 @@
 export type EntryType = 'income' | 'expense';
 export type DebtKind = 'bank' | 'card' | 'personal' | 'installment' | 'other';
 export type Strategy = 'avalanche' | 'snowball';
-export interface Debt { id: string; name: string; lender: string; kind: DebtKind; original: number; balance: number; apr: number; minimum: number; dueDay: number; createdAt: string; note: string; }
+export interface Debt { id: string; name: string; lender: string; kind: DebtKind; original: number; balance: number; apr: number; minimum: number; dueDay: number; interestDueDay?: number; interestExpected?: number; createdAt: string; note: string; }
 export type SpendingNeed = 'essential' | 'flexible';
 export type SpendingTrigger = 'planned' | 'impulse' | 'promotion' | 'emotion' | 'social';
 export interface Transaction { id: string; type: EntryType; amount: number; category: string; date: string; note: string; need?: SpendingNeed; trigger?: SpendingTrigger; }
-export interface Payment { id: string; debtId: string; date: string; principal: number; interest: number; fee: number; note: string; }
+export interface Payment { id: string; debtId: string; date: string; period?: string; principal: number; interest: number; fee: number; note: string; }
 export interface Budget { category: string; limit: number; }
 export interface Preferences { monthlyIncome: number; essentials: number; reserve: number; strategy: Strategy; }
 export interface Rollover { id:string; debtId:string; kind:'card'|'loan'; dueDate:string; amount:number; fee:number; funding:'own'|'bank_transfer'|'refinance'|'other'; status:'planned'|'completed'|'cancelled'; completedAt:string; note:string; }

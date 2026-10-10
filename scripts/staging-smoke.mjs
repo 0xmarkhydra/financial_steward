@@ -99,12 +99,34 @@ try {
     const reload=await request('/api/v1/state');
     expected(reload.status===200 && reload.data.data.transactions.some(t=>t.id===item.id && t.need==='flexible' && t.trigger==='impulse'),'Behavior metadata not persisted');
   });
+  await check('Server audit journal records financial changes without notes',async()=>{
+    const result=await request('/api/v1/journal');
+    expected(result.status===200 && Array.isArray(result.data.events),'Journal read failed');
+    expected(result.data.events.some(e=>e.eventType==='transaction'&&e.action==='created'&&e.amount===12500),
+      'Created transaction absent from journal');
+    expected(!JSON.stringify(result.data.events).includes('Disposable staging smoke test'),'Sensitive note leaked in audit log');
+  });
   await check('MCP spending coach aggregates behavior without notes', async () => {
     const r=await request('/mcp','POST',{jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'analyze_spending_behavior',arguments:{}}});
     expected(r.status===200 && r.data.result?.content?.[0]?.text,'MCP spending data missing');
     const output=JSON.parse(r.data.result.content[0].text);
     expected(output.impulsiveOrEmotionDrivenSpent>=12500,'MCP failed to aggregate impulse spending');
     expected(!JSON.stringify(output).includes('Disposable staging smoke test'),'MCP leaked raw note');
+  });
+  await check('Interest due date and late repayment period persist securely',async()=>{
+    const before=await request('/api/v1/state');
+    expected(before.status===200,'Cannot read state before obligation test');
+    const id=crypto.randomUUID();
+    const item={id,name:'Smoke-only loan',lender:'Test',kind:'bank',original:1000000,balance:800000,apr:12,
+      minimum:100000,dueDay:15,interestDueDay:10,interestExpected:40000,createdAt:'2026-08-01',note:''};
+    const payment={id:crypto.randomUUID(),debtId:id,date:'2026-10-11',period:'2026-09',principal:200000,interest:40000,fee:0,note:''};
+    const updated={...before.data.data,debts:[...before.data.data.debts,item],payments:[...before.data.data.payments,payment]};
+    const save=await request('/api/v1/state','PUT',{data:updated,revision:before.data.revision});
+    expected(save.status===200,'Cannot save debt interest schedule '+save.status);
+    const restored=await request('/api/v1/state');
+    expected(restored.status===200&&restored.data.data.debts.some(d=>d.id===id&&d.interestDueDay===10&&d.interestExpected===40000),
+      'Interest schedule was not persisted');
+    expected(restored.data.data.payments.some(p=>p.id===payment.id&&p.period==='2026-09'), 'Repayment period not persisted');
   });
   await check('Stale revision update blocked', async () => {
     const r=await request('/api/v1/state','PUT',{data:state.data,revision:state.revision});

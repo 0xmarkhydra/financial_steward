@@ -7,7 +7,7 @@ const num=(x:unknown): x is number=>typeof x==='number'&&Number.isFinite(x)&&x>=
 const id=(x:unknown)=>str(x,100)&&Boolean(x);
 const date=(x:unknown): x is string=>{if(!str(x,10)||!/^\d{4}-\d{2}-\d{2}$/.test(x))return false;const [y,m,d]=x.split('-').map(Number);const parsed=new Date(Date.UTC(y,m-1,d));return parsed.getUTCFullYear()===y&&parsed.getUTCMonth()===m-1&&parsed.getUTCDate()===d;};
 function validDebt(d:unknown): d is Debt {
-  return obj(d)&&id(d.id)&&str(d.name,140)&&str(d.lender,140)&&typeof d.kind==='string'&&d.kind in DEBT_KINDS&&num(d.original)&&num(d.balance)&&d.balance<=d.original&&num(d.apr)&&d.apr<=1000&&num(d.minimum)&&typeof d.dueDay==='number'&&Number.isInteger(d.dueDay)&&d.dueDay>=1&&d.dueDay<=31&&date(d.createdAt)&&str(d.note,2000);
+  return obj(d)&&id(d.id)&&str(d.name,140)&&str(d.lender,140)&&typeof d.kind==='string'&&d.kind in DEBT_KINDS&&num(d.original)&&num(d.balance)&&d.balance<=d.original&&num(d.apr)&&d.apr<=1000&&num(d.minimum)&&(d.interestExpected===undefined||num(d.interestExpected))&&(d.interestDueDay===undefined||(typeof d.interestDueDay==='number'&&Number.isInteger(d.interestDueDay)&&d.interestDueDay>=1&&d.interestDueDay<=31))&&typeof d.dueDay==='number'&&Number.isInteger(d.dueDay)&&d.dueDay>=1&&d.dueDay<=31&&date(d.createdAt)&&str(d.note,2000);
 }
 function validTransaction(t:unknown):t is Transaction {
   return obj(t)&&id(t.id)&&(t.type==='income'||t.type==='expense')&&num(t.amount)&&t.amount>0&&str(t.category,100)&&date(t.date)&&str(t.note,2000)&&
@@ -15,7 +15,7 @@ function validTransaction(t:unknown):t is Transaction {
     (t.trigger===undefined||(t.type==='expense'&&['planned','impulse','promotion','emotion','social'].includes(String(t.trigger))));
 }
 function validPayment(p:unknown):p is Payment {
-  return obj(p)&&id(p.id)&&id(p.debtId)&&date(p.date)&&num(p.principal)&&num(p.interest)&&num(p.fee)&&p.principal+p.interest+p.fee>0&&str(p.note,2000);
+  return obj(p)&&id(p.id)&&id(p.debtId)&&date(p.date)&&(p.period===undefined||(str(p.period,7)&&/^\d{4}-(0[1-9]|1[0-2])$/.test(p.period)))&&num(p.principal)&&num(p.interest)&&num(p.fee)&&p.principal+p.interest+p.fee>0&&str(p.note,2000);
 }
 function validBudget(b:unknown):b is Budget {return obj(b)&&str(b.category,100)&&num(b.limit);}
 function validPreferences(p:unknown):p is Preferences {return obj(p)&&num(p.monthlyIncome)&&num(p.essentials)&&num(p.reserve)&&(p.strategy==='avalanche'||p.strategy==='snowball');}

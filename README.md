@@ -30,6 +30,7 @@ financial_steward/
 - Thu/chi: loại, danh mục, ngày, ghi chú, lọc, sửa, xóa.
 - Thanh toán gốc, lãi, phí: gốc làm giảm dư nợ; cả ba đi vào dòng tiền trả nợ, không tính trùng vào chi phí sinh hoạt.
 - Ngân sách chi tiêu theo danh mục, cảnh báo vượt hạn mức.
+- Trung tâm quản trị nợ: theo dõi kỳ trả nợ, ngày đóng lãi riêng, lịch đáo thẻ, hạn mức, nhật ký sửa/xóa giao dịch và đánh giá quyết định từ dữ liệu (xem `docs/DEBT_COMMAND.md`).
 - Sổ tay hành vi chi tiêu: phân loại khoản thiết yếu/linh hoạt và bối cảnh mua sắm; trang cố vấn tính hạn mức chi tháng/ngày, cảnh báo tốc độ chi và gợi ý ngân sách danh mục (chỉ lưu hạn mức khi xác nhận).
 - Dòng tiền và lộ trình trả nợ avalanche / snowball.
 - Biểu đồ tổng quan và báo cáo 6 tháng.

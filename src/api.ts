@@ -48,5 +48,7 @@ export const login=(email:string,password:string)=>request<AuthResponse>('/api/v
 export const me=()=>request<{user:Account}>('/api/v1/me');
 export const getState=()=>request<ServerState>('/api/v1/state');
 export const saveState=(data:FinanceData,revision:number)=>request<{revision:number}>('/api/v1/state','PUT',{data,revision});
+export interface JournalEntry {id:number;revision:number;eventType:string;action:string;recordId:string;title:string;amount:number;createdAt:string;}
+export const getJournal=()=>request<{events:JournalEntry[]}>('/api/v1/journal');
 export const logout=()=>request('/api/v1/auth/logout','POST');
 export const deleteAccount=(password:string)=>request('/api/v1/account','DELETE',{password});

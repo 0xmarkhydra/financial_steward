@@ -96,6 +96,79 @@
 @media(max-width:880px){.spending-metrics{grid-template-columns:1fr}.spending-category{align-items:flex-start}.spending-category-actions{flex-direction:column;align-items:flex-end}}
 @media(max-width:540px){.spending-detail-grid{grid-template-columns:1fr}.spending-category{flex-direction:column;gap:12px}.spending-category-actions{flex-direction:row;width:100%;justify-content:space-between}.spending-progress-caption{flex-direction:column}.spending-metric>strong{font-size:23px}}
 
+
+/* Debt command center: notifications while the app is open, not background push. */
+.dashboard-obligation-link{width:100%;display:flex;align-items:center;gap:14px;text-align:left;padding:15px 17px;margin-bottom:14px;border:1px solid #e9cda7;border-radius:14px;background:#fff8e9;color:#ad772d;cursor:pointer}
+.dashboard-obligation-link span{flex:1;display:grid;gap:5px;min-width:0}
+.dashboard-obligation-link strong{font-size:13px;color:#805a26}
+.dashboard-obligation-link small{font-size:12px;color:#886e4d;line-height:1.6}
+.command-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 0 18px}
+.command-summary .panel{display:grid;gap:8px}
+.command-summary span{font-size:12px;color:#65788a}
+.command-summary strong{font-size:31px;color:#1d3548;font-weight:800}
+.command-summary small{font-size:11px;color:#8293a4;line-height:1.6}
+.command-section{margin-bottom:18px}
+.command-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.command-header h2{display:flex;align-items:center;gap:9px;font-size:18px;color:#263d50;margin-top:6px}
+.command-header>svg{color:#8ba0ad}
+.command-meta{font-size:11px;color:#95a2ae;text-align:right}
+.command-reminders,.command-ledger,.command-reviews{display:grid;gap:11px}
+.command-reminder{display:flex;align-items:flex-start;gap:13px;border-radius:12px;border:1px solid #dce6ed;padding:15px;background:#fcfdfe}
+.command-reminder.overdue{background:#fff5f2;border-color:#f4d6cb}
+.command-reminder.urgent{background:#fffaf0;border-color:#efdfb8}
+.command-reminder-icon{width:37px;height:37px;flex:0 0 37px;display:grid;place-items:center;border-radius:11px;color:#987b49;background:#f1e9d8}
+.command-reminder.overdue .command-reminder-icon{background:#fde5dc;color:#c04e43}
+.command-reminder-content{flex:1;min-width:0}
+.command-reminder-title{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.command-reminder-title strong{font-size:13px;color:#253f51}
+.command-reminder-title span{font-size:10px;border-radius:20px;background:#f3e5cb;color:#8b672d;padding:3px 8px}
+.command-reminder.overdue .command-reminder-title span{background:#f9dfdb;color:#b64f45}
+.command-reminder-content small{display:block;margin-top:7px;color:#718397;font-size:11px}
+.command-reminder-content p{color:#7e90a1;font-size:11px;line-height:1.7;margin-top:6px}
+.command-reminder-action{display:grid;gap:8px;text-align:right;justify-items:end;min-width:122px}
+.command-reminder-action strong{font-size:13px;color:#284255}
+.command-reminder-action button{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#178b75;border:0;background:none;cursor:pointer;padding:0}
+.command-filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:12px}
+.command-filters button{padding:8px 12px;white-space:nowrap;border:1px solid #dfe8ef;color:#607388;border-radius:10px;background:#fff;font-size:11px;cursor:pointer}
+.command-filters button.active{background:#e8f8f3;border-color:#99dece;color:#148c74;font-weight:700}
+.command-ledger-row{display:flex;gap:13px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #edf1f4}
+.command-ledger-icon{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border-radius:10px;background:#eef4f6;color:#8295a1}
+.command-ledger-icon.in{color:#098c73;background:#def7ed}
+.command-ledger-icon.out{color:#c8784a;background:#fcf0e7}
+.command-ledger-details{flex:1;min-width:0;display:grid;gap:4px}
+.command-ledger-details strong{font-size:12px;color:#283f52}
+.command-ledger-details small{font-size:11px;color:#778b9b;line-height:1.6}
+.command-ledger-details p{font-size:11px;color:#94a2ad;line-height:1.5}
+.command-ledger-amount{font-size:12px;color:#6f8190;text-align:right;white-space:nowrap}
+.command-ledger-amount.in{color:#138b71}.command-ledger-amount.out{color:#c17345}
+.command-review{border-radius:12px;border:1px solid #e4ebf0;padding:15px;background:#fbfcfe}
+.command-review.risk{border-color:#f0d4cf;background:#fff8f5}
+.command-review.caution{border-color:#ebdfbc;background:#fffdf7}
+.command-review.good{border-color:#cce9dd;background:#f6fdfa}
+.command-review-top{display:flex;align-items:center;gap:9px;margin-bottom:9px;color:#aa7e3e}
+.command-review.risk .command-review-top{color:#c75f51}
+.command-review.good .command-review-top{color:#149276}
+.command-review h3{font-size:13px;color:#273e50}
+.command-review p{font-size:12px;color:#667d8e;line-height:1.75;margin-top:6px}
+.command-disclaimer{color:#93a1ac;font-size:11px;line-height:1.7;margin-top:18px}
+.command-empty{padding:25px;display:grid;justify-items:center;gap:10px;text-align:center;color:#90a1ad}
+.command-empty strong{font-size:13px;color:#536e7f}
+.command-empty p{font-size:12px;line-height:1.7}
+.command-more{display:block;margin:15px auto;padding:9px 16px;border-radius:9px;background:#f0f8f6;color:#188b75;border:1px solid #bfe5db;font-size:12px;cursor:pointer}
+@media(max-width:900px){.command-summary{grid-template-columns:1fr}.command-reminder{flex-wrap:wrap}.command-reminder-action{width:100%;display:flex;align-items:center;justify-content:space-between;min-width:0}.command-header{flex-wrap:wrap}.command-reminder-content{flex-basis:calc(100% - 52px)}}
+@media(max-width:480px){.command-ledger-row{gap:7px}.command-ledger-amount{white-space:normal;font-size:11px;max-width:95px}.command-reminder-action{padding-left:48px}.command-header h2{font-size:16px}}
+
+
+.command-row-review{display:flex;align-items:flex-start;gap:5px;color:#916c2e!important;background:#fff8ea;border-radius:8px;padding:7px 9px;line-height:1.55!important;margin-top:7px}
+.command-row-review svg{flex-shrink:0;margin-top:2px}
+.command-journal{display:grid;gap:0;margin-top:15px}
+.command-journal-item{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;border-bottom:1px solid #edf1f4;padding:11px 0}
+.command-journal-item>div{display:grid;gap:5px}
+.command-journal-item strong{font-size:12px;color:#31475a}
+.command-journal-item small{font-size:11px;color:#8395a5}
+.command-journal-item>span{font-size:12px;color:#457a8a;white-space:nowrap}
+.command-journal-error{padding:11px 13px;border-radius:10px;color:#ad4242;background:#fff0ec;font-size:12px}
+
 /* Installable PWA controls — independent of authentication UI. */
 .pwa-network-status{position:fixed;z-index:55;inset:0 0 auto;display:flex;gap:9px;align-items:center;justify-content:center;padding:calc(10px + env(safe-area-inset-top)) 15px 10px;background:#fff3e6;border-bottom:1px solid #eed4ae;color:#825919;font-size:12px;font-weight:600;text-align:center;box-shadow:0 4px 14px #14243b0b}
 .pwa-network-status svg{flex-shrink:0}

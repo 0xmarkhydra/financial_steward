@@ -113,6 +113,7 @@ func run() error {
 	mux.HandleFunc("GET /api/v1/me", a.withAuth(a.me))
 	mux.HandleFunc("DELETE /api/v1/account", a.withAuth(a.deleteAccount))
 	mux.HandleFunc("GET /api/v1/state", a.withAuth(a.getState))
+	mux.HandleFunc("GET /api/v1/journal", a.withAuth(a.getJournal))
 	mux.HandleFunc("POST /mcp", a.withAuth(a.mcp))
 	mux.HandleFunc("PUT /api/v1/state", a.withAuth(a.putState))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { fail(w, 404, "Không tìm thấy API.") })
@@ -122,17 +123,19 @@ func run() error {
 	return srv.ListenAndServe()
 }
 func migrate(ctx context.Context, db *sql.DB) error {
-	sqlBytes, err := migrations.ReadFile("migrations/001_init.sql")
-	if err != nil {
-		return err
-	}
-	// Statements are developer-owned static SQL, not user input.
-	for _, statement := range strings.Split(string(sqlBytes), ";") {
-		if strings.TrimSpace(statement) == "" {
-			continue
+	for _, name := range []string{"001_init.sql", "002_journal.sql"} {
+		sqlBytes, err := migrations.ReadFile("migrations/" + name)
+		if err != nil {
+			return err
 		}
-		if _, err = db.ExecContext(ctx, statement); err != nil {
-			return fmt.Errorf("migration failed: %w", err)
+		// Statements are developer-owned static SQL, not user input.
+		for _, statement := range strings.Split(string(sqlBytes), ";") {
+			if strings.TrimSpace(statement) == "" {
+				continue
+			}
+			if _, err = db.ExecContext(ctx, statement); err != nil {
+				return fmt.Errorf("migration %s failed: %w", name, err)
+			}
 		}
 	}
 	return nil
@@ -446,14 +449,42 @@ func (a *server) putState(w http.ResponseWriter, r *http.Request, s session) {
 		fail(w, 400, "Không thể lưu dữ liệu.")
 		return
 	}
-	var revision int64
-	err = a.db.QueryRowContext(r.Context(), "UPDATE financial_states SET data=$1,revision=revision+1,updated_at=now() WHERE user_id=$2 AND revision=$3 RETURNING revision", raw, s.user.ID, in.Revision).Scan(&revision)
-	if err == sql.ErrNoRows {
+	tx, err := a.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		fail(w, 500, "Không thể bắt đầu lưu dữ liệu.")
+		return
+	}
+	defer tx.Rollback()
+	var currentRevision int64
+	var currentRaw []byte
+	err = tx.QueryRowContext(r.Context(), "SELECT revision,data FROM financial_states WHERE user_id=$1 FOR UPDATE", s.user.ID).Scan(&currentRevision, &currentRaw)
+	if err != nil {
+		fail(w, 500, "Không thể đọc dữ liệu hiện tại.")
+		return
+	}
+	if currentRevision != in.Revision {
 		fail(w, 409, "Dữ liệu đã thay đổi ở thiết bị khác. Hãy tải lại trước khi tiếp tục.")
 		return
 	}
+	previous, err := finance.Decode(currentRaw)
 	if err != nil {
+		fail(w, 500, "Dữ liệu đã lưu không hợp lệ.")
+		return
+	}
+	revision := currentRevision + 1
+	if _, err = tx.ExecContext(r.Context(), "UPDATE financial_states SET data=$1,revision=$2,updated_at=now() WHERE user_id=$3", raw, revision, s.user.ID); err != nil {
 		fail(w, 500, "Không thể cập nhật dữ liệu.")
+		return
+	}
+	for _, change := range financeStateChanges(previous, data) {
+		if _, err = tx.ExecContext(r.Context(), "INSERT INTO financial_journal (user_id,revision,event_type,action,record_id,title,amount) VALUES ($1,$2,$3,$4,$5,$6,$7)",
+			s.user.ID, revision, change.Kind, change.Action, change.ID, change.Title, change.Amount); err != nil {
+			fail(w, 500, "Không thể ghi nhật ký thay đổi.")
+			return
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		fail(w, 500, "Không thể hoàn tất lưu dữ liệu.")
 		return
 	}
 	response(w, 200, map[string]any{"revision": revision})

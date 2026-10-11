@@ -20,7 +20,7 @@ describe('installable web PWA', () => {
     const app=readFileSync(path('src/App.tsx'),'utf8');
     const guide=readFileSync(path('src/MCPPage.tsx'),'utf8');
     expect(app).toContain("label:'Kết nối ChatGPT'");
-    expect(guide).toContain('Chưa sẵn sàng kết nối trực tiếp ChatGPT');
+    expect(guide).toContain('Chưa xác nhận máy chủ OAuth đã sẵn sàng');
     expect(guide).toContain('tools/list');
   });
   it('ships valid PNG icons for install and iOS', () => {

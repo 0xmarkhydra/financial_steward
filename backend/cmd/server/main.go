@@ -114,7 +114,17 @@ func run() error {
 	mux.HandleFunc("DELETE /api/v1/account", a.withAuth(a.deleteAccount))
 	mux.HandleFunc("GET /api/v1/state", a.withAuth(a.getState))
 	mux.HandleFunc("GET /api/v1/journal", a.withAuth(a.getJournal))
-	mux.HandleFunc("POST /mcp", a.withAuth(a.mcp))
+	mux.HandleFunc("GET /api/v1/mcp/status", a.withAuth(a.mcpOAuthStatus))
+	mux.HandleFunc("POST /api/v1/mcp/revoke", a.withAuth(a.revokeMCPAccess))
+	mux.HandleFunc("POST /mcp", a.mcpWithAuth(a.mcp))
+	mux.HandleFunc("GET /mcp", a.mcpWithAuth(a.mcp))
+	mux.HandleFunc("GET /.well-known/oauth-protected-resource", a.protectedMetadata)
+	mux.HandleFunc("GET /.well-known/oauth-protected-resource/mcp", a.protectedMetadata)
+	mux.HandleFunc("GET /.well-known/oauth-authorization-server", a.authServerMetadata)
+	mux.HandleFunc("POST /oauth/register", a.oauthRegister)
+	mux.HandleFunc("GET /oauth/authorize", a.oauthAuthorize)
+	mux.HandleFunc("POST /oauth/authorize", a.oauthAuthorize)
+	mux.HandleFunc("POST /oauth/token", a.oauthToken)
 	mux.HandleFunc("PUT /api/v1/state", a.withAuth(a.putState))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { fail(w, 404, "Không tìm thấy API.") })
 	addr := ":" + getenv("PORT", "8080")
@@ -123,7 +133,7 @@ func run() error {
 	return srv.ListenAndServe()
 }
 func migrate(ctx context.Context, db *sql.DB) error {
-	for _, name := range []string{"001_init.sql", "002_journal.sql"} {
+	for _, name := range []string{"001_init.sql", "002_journal.sql", "003_mcp_oauth.sql"} {
 		sqlBytes, err := migrations.ReadFile("migrations/" + name)
 		if err != nil {
 			return err
@@ -218,7 +228,7 @@ func (a *server) middleware(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		if r.URL.Path != "/healthz" && r.URL.Path != "/mcp" && !strings.HasPrefix(r.URL.Path, "/api/v1/") {
+		if r.URL.Path != "/healthz" && r.URL.Path != "/mcp" && !strings.HasPrefix(r.URL.Path, "/api/v1/") && !strings.HasPrefix(r.URL.Path, "/.well-known/oauth-") && !strings.HasPrefix(r.URL.Path, "/oauth/") {
 			fail(w, 404, "Not found")
 			return
 		}

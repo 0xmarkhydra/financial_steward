@@ -62,6 +62,32 @@ try {
     const denied=await fetch(api+'/healthz',{headers:{Origin:'https://invalid.example'},signal:AbortSignal.timeout(12000)});
     expected(denied.status===403,'Foreign origin should be denied');
   });
+  await check('OAuth MCP discovery metadata and unauthenticated challenge', async()=>{
+    const resource=await request('/.well-known/oauth-protected-resource/mcp','GET',undefined,'');
+    expected(resource.status===200 && resource.data.resource===api+'/mcp','Resource discovery mismatch '+resource.status);
+    expected(resource.data.authorization_servers?.includes(api),'Issuer missing from protected metadata');
+    const metadata=await request('/.well-known/oauth-authorization-server','GET',undefined,'');
+    expected(metadata.status===200&&metadata.data.issuer===api,'Authorization metadata mismatch');
+    expected(metadata.data.authorization_endpoint===api+'/oauth/authorize','Missing authorization endpoint');
+    expected(metadata.data.token_endpoint===api+'/oauth/token','Missing token endpoint');
+    expected(metadata.data.registration_endpoint===api+'/oauth/register','Missing DCR endpoint');
+    expected(metadata.data.code_challenge_methods_supported?.includes('S256'),'PKCE S256 not advertised');
+    const unauthorized=await request('/mcp','POST',{jsonrpc:'2.0',id:11,method:'tools/list',params:{}},'');
+    expected(unauthorized.status===401,'Expected missing OAuth token to return HTTP 401');
+    expected(unauthorized.headers.get('www-authenticate')?.includes('oauth-protected-resource/mcp'),
+      'OAuth challenge missing WWW-Authenticate metadata URL');
+  });
+  await check('OAuth DCR accepts ChatGPT callback and rejects open redirects',async()=>{
+    const good=await request('/oauth/register','POST',{client_name:'ChatGPT QA',
+      redirect_uris:['https://chatgpt.com/connector_platform_oauth_redirect'],
+      token_endpoint_auth_method:'none',
+      grant_types:['authorization_code','refresh_token'],response_types:['code']},'');
+    expected(good.status===201&&good.data.client_id&&good.data.token_endpoint_auth_method==='none',
+      'ChatGPT dynamic client registration failed '+good.status);
+    const malicious=await request('/oauth/register','POST',{client_name:'Untrusted redirect',
+      redirect_uris:['https://chatgpt.com.evil.test/callback']},'');
+    expected(malicious.status===400,'Untrusted OAuth callback URL was accepted');
+  });
   await check('Unauthorized finance rejected', async () => {
     const r=await request('/api/v1/state');
     expected(r.status===401, 'Unauthorized state should be 401');

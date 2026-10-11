@@ -32,6 +32,7 @@ financial_steward/
 - Ngân sách chi tiêu theo danh mục, cảnh báo vượt hạn mức.
 - Trung tâm quản trị nợ: theo dõi kỳ trả nợ, ngày đóng lãi riêng, lịch đáo thẻ, hạn mức, nhật ký sửa/xóa giao dịch và đánh giá quyết định từ dữ liệu (xem `docs/DEBT_COMMAND.md`).
 - Phường ngày/tuần/tháng: lịch góp/lĩnh từng kỳ, nghĩa vụ còn lại, đối soát thu-chi, nhắc góp và quản lý dây họ/hụi/phường.
+- **OAuth MCP cho ChatGPT (đang kiểm thử):** metadata khám phá, PKCE, phạm vi chỉ đọc, refresh token, thu hồi quyền và hướng dẫn xử lý DNS. Xem `docs/CHATGPT_MCP_OAUTH.md`.
 - **Lịch tài chính**: lịch tháng, khoản cần chi/cần thu và dòng tiền đã ghi theo ngày. Tổng hợp chi sinh hoạt, trả nợ, góp/lĩnh phường; tự hẹn lịch thu/chi, nhập qua chat và đánh dấu đã thực hiện khi xác nhận. Chi tiết ở `docs/FINANCE_CALENDAR.md`.
 - Chat Quản gia: cửa sổ nổi trên mọi màn và màn chat đầy đủ, hỏi bổ sung, xác nhận trước khi ghi thu chi/nợ/phường; hội thoại hiện là parser theo quy tắc, **chưa tích hợp LLM** (xem `docs/PHUONG_CHAT_AGENT.md`).
 - Sổ tay hành vi chi tiêu: phân loại khoản thiết yếu/linh hoạt và bối cảnh mua sắm; trang cố vấn tính hạn mức chi tháng/ngày, cảnh báo tốc độ chi và gợi ý ngân sách danh mục (chỉ lưu hạn mức khi xác nhận).

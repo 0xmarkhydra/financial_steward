@@ -100,6 +100,17 @@ type AgentMessage struct {
 	Content   string `json:"content"`
 	CreatedAt string `json:"createdAt"`
 }
+type CashPlan struct {
+	ID                  string  `json:"id"`
+	Title               string  `json:"title"`
+	Direction           string  `json:"direction"`
+	Amount              float64 `json:"amount"`
+	DueDate             string  `json:"dueDate"`
+	Status              string  `json:"status"`
+	Note                string  `json:"note"`
+	CompletedAt         string  `json:"completedAt,omitempty"`
+	LinkedTransactionID string  `json:"linkedTransactionId,omitempty"`
+}
 type Data struct {
 	Version       int            `json:"version"`
 	Debts         []Debt         `json:"debts"`
@@ -110,6 +121,7 @@ type Data struct {
 	PhuongGroups  []PhuongGroup  `json:"phuongGroups,omitempty"`
 	PhuongEntries []PhuongEntry  `json:"phuongEntries,omitempty"`
 	AgentChat     []AgentMessage `json:"agentChat,omitempty"`
+	CashPlans     []CashPlan     `json:"cashPlans,omitempty"`
 	Preferences   Preferences    `json:"preferences"`
 }
 
@@ -241,6 +253,24 @@ func (d Data) Validate() error {
 	for _, v := range d.AgentChat {
 		if !unique(ids, v.ID) || !validDate(v.CreatedAt) || len(v.Content) == 0 || len(v.Content) > 5000 || (v.Role != "user" && v.Role != "assistant") {
 			return errors.New("invalid chat message")
+		}
+	}
+	if len(d.CashPlans) > 10000 {
+		return errors.New("too many planned cashflows")
+	}
+	ids = map[string]bool{}
+	for _, v := range d.CashPlans {
+		if !unique(ids, v.ID) || strings.TrimSpace(v.Title) == "" || len(v.Title) > 140 || !amount(v.Amount) || v.Amount == 0 || !validDate(v.DueDate) || len(v.Note) > 2000 || (v.CompletedAt != "" && !validDate(v.CompletedAt)) || (v.LinkedTransactionID != "" && len(v.LinkedTransactionID) > 100) {
+			return errors.New("invalid planned cashflow")
+		}
+		if v.Direction != "in" && v.Direction != "out" {
+			return errors.New("invalid cashflow direction")
+		}
+		if v.Status != "planned" && v.Status != "completed" && v.Status != "cancelled" {
+			return errors.New("invalid cashflow status")
+		}
+		if v.LinkedTransactionID != "" && v.Status != "completed" {
+			return errors.New("linked transaction without completion")
 		}
 	}
 	ids = map[string]bool{}

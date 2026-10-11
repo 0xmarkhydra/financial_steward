@@ -157,6 +157,44 @@ try {
     const output=JSON.parse(r.data.result.content[0].text);
     expected(output.phuongCommitmentThisMonth===4000000,'MCP failed to reserve 20 daily October contributions: '+output.phuongCommitmentThisMonth);
   });
+  await check('Persist calendar receivables/payables and audit without private notes',async()=>{
+    const before=await request('/api/v1/state');
+    expected(before.status===200,'Cannot read calendar state');
+    const incoming={id:crypto.randomUUID(),title:'Smoke invoice',direction:'in',amount:3000000,
+      dueDate:'2026-10-20',status:'planned',note:'PRIVATE-SCHEDULE-NOTE'};
+    const outgoing={id:crypto.randomUUID(),title:'Smoke rent',direction:'out',amount:1500000,
+      dueDate:'2026-10-21',status:'planned',note:''};
+    const change={...before.data.data,cashPlans:[...(before.data.data.cashPlans||[]),incoming,outgoing]};
+    const saved=await request('/api/v1/state','PUT',{data:change,revision:before.data.revision});
+    expected(saved.status===200,'Calendar create failed '+saved.status);
+    const loaded=await request('/api/v1/state');
+    expected(loaded.data.data.cashPlans.some(e=>e.id===incoming.id&&e.direction==='in'&&e.amount===3000000),
+      'Expected receivable not retained');
+    expected(loaded.data.data.cashPlans.some(e=>e.id===outgoing.id&&e.direction==='out'),'Payable was not retained');
+    const journal=await request('/api/v1/journal');
+    expected(journal.data.events.some(e=>e.recordId===incoming.id&&e.eventType==='cash_plan'&&e.action==='created'),
+      'New planned cashflow absent from journal');
+    expected(!JSON.stringify(journal.data.events).includes('PRIVATE-SCHEDULE-NOTE'),'Private note leaked into audit');
+  });
+  await check('Confirm planned income once and link exactly one real transaction',async()=>{
+    const before=await request('/api/v1/state');
+    expected(before.status===200,'Cannot read calendar state to settle');
+    const incoming=before.data.data.cashPlans.find(x=>x.title==='Smoke invoice');
+    expected(Boolean(incoming)&&incoming.status==='planned','Expected planned receivable missing');
+    const transactionId=crypto.randomUUID(),paidAt='2026-10-12';
+    const record={id:transactionId,type:'income',amount:incoming.amount,date:paidAt,category:'Khác',note:'Theo lịch: Smoke invoice'};
+    const change={...before.data.data,
+      transactions:[...before.data.data.transactions,record],
+      cashPlans:before.data.data.cashPlans.map(x=>x.id===incoming.id?{...x,status:'completed',completedAt:paidAt,linkedTransactionId:transactionId}:x)};
+    const saved=await request('/api/v1/state','PUT',{data:change,revision:before.data.revision});
+    expected(saved.status===200,'Calendar settlement rejected');
+    const loaded=await request('/api/v1/state');
+    expected(loaded.data.data.cashPlans.find(x=>x.id===incoming.id)?.linkedTransactionId===transactionId,
+      'Settled plan was not linked to actual income');
+    expected(loaded.data.data.transactions.filter(x=>x.id===transactionId).length===1,'Duplicate/missing actual income');
+    const journal=await request('/api/v1/journal');
+    expected(journal.data.events.some(e=>e.recordId===incoming.id&&e.action==='updated'),'Settlement absent from journal');
+  });
   await check('Stale revision update blocked', async () => {
     const r=await request('/api/v1/state','PUT',{data:state.data,revision:state.revision});
     expected(r.status===409,'Expected revision conflict 409, got '+r.status);

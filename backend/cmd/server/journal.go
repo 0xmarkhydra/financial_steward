@@ -56,6 +56,9 @@ func financeAuditRecords(d finance.Data) map[string]auditRecord {
 	for _, b := range d.Budgets {
 		add("budget", b.Category, "Ngân sách: "+b.Category, b.Limit, b)
 	}
+	for _, plan := range d.CashPlans {
+		add("cash_plan", plan.ID, "Lịch thu/chi: "+plan.Title, plan.Amount, plan)
+	}
 	groupNames := make(map[string]string, len(d.PhuongGroups))
 	for _, g := range d.PhuongGroups {
 		add("phuong_group", g.ID, "Dây phường: "+g.Name, g.Contribution, g)

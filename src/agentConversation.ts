@@ -1,16 +1,18 @@
-import type {Debt, FinanceData, PhuongCycle, PhuongEntry, PhuongGroup, Transaction} from './types';
+import type {CashPlan, Debt, FinanceData, PhuongCycle, PhuongEntry, PhuongGroup, Transaction} from './types';
 import {localISO,money,total} from './finance';
 import {financeReminders} from './debtCommand';
 import {analyzeSpending} from './spendingCoach';
 import {phuongAssessment,phuongDues} from './phuong';
+import {calendarTodaysEvents,calendarTotals} from './financeCalendar';
 
 export type Draft =
  |{kind:'phuong';cycle?:PhuongCycle;contribution?:number;rounds?:number;startDate?:string;payoutRound?:number;payoutExpected?:number;name?:string;organizer?:string;payoutUnknown?:boolean}
  |{kind:'phuong_entry';entryKind:'contribution'|'payout'|'fee';groupId?:string;amount?:number;round?:number;date?:string}
+ |{kind:'cash_plan';direction:'in'|'out';title?:string;amount?:number;dueDate?:string}
  |{kind:'transaction';type:'income'|'expense';amount?:number;category?:string;date?:string;note?:string}
  |{kind:'debt';name?:string;balance?:number;minimum?:number;dueDay?:number;apr?:number;debtKind?:Debt['kind']};
 
-export type ProposedRecord={kind:'phuong';group:PhuongGroup}|{kind:'phuong_entry';entry:PhuongEntry}|{kind:'transaction';transaction:Transaction}|{kind:'debt';debt:Debt};
+export type ProposedRecord={kind:'phuong';group:PhuongGroup}|{kind:'phuong_entry';entry:PhuongEntry}|{kind:'transaction';transaction:Transaction}|{kind:'debt';debt:Debt}|{kind:'cash_plan';plan:CashPlan};
 export type AgentReply={text:string;draft:Draft|null;proposal?:ProposedRecord};
 
 const normalize=(s:string)=>s.toLocaleLowerCase('vi').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
@@ -39,6 +41,9 @@ const dateFromText=(text:string,today:string)=>{
 export function parseAgentAmount(input:string){return moneyTokens(input)[0];}
 export function startAgentDraft(text:string,data:FinanceData,today=localISO()):Draft|null{
  const n=normalize(text);
+ if(/\b(can thu|can chi|phai thu|phai chi|sap thu|sap chi|se thu|se chi|hen thu|hen chi)\b/.test(n)){
+   return {kind:'cash_plan',direction:/\b(can thu|phai thu|sap thu|se thu|hen thu)\b/.test(n)?'in':'out'};
+ }
  const phuong=/\b(phuong|hui|choi ho|day ho|day hui)\b/i.test(n);
  const entry=/\b(da gop|vua gop|dong phuong|gop ky|nhan phuong|linh phuong|da linh)\b/.test(n);
  if(phuong && entry)return {kind:'phuong_entry',entryKind:/linh|nhan phuong/.test(n)?'payout':'contribution'};
@@ -51,7 +56,14 @@ function augmentDraft(draft:Draft,text:string,data:FinanceData,today:string):Dra
  const n=normalize(text);
  const amounts=moneyTokens(text);
  const amount=amounts[0];
- const date=dateFromText(text,today);
+ const tomorrow=new Date(Date.UTC(Number(today.slice(0,4)),Number(today.slice(5,7))-1,Number(today.slice(8))+1)).toISOString().slice(0,10);
+ const date=dateFromText(text,today)||(/\b(ngay mai|mai)\b/.test(n)?tomorrow:/\b(hom nay)\b/.test(n)?today:undefined);
+ if(draft.kind==='cash_plan'){
+   const titleMatch=text.match(/(?:tên khoản|tên lịch|là khoản|tiền)\s*[:\-]?\s*([^,.!?\d]{2,90})/i);
+   const cleaned=titleMatch?.[1]?.trim().replace(/\s+(?:ngày|vao ngày|vào ngày|hom nay|hôm nay|ngày mai|mai)\s*$/i,'');
+   const directTitle=!draft.title&&!amount&&!date&&!/^(ngay mai|hom nay|mai)$/i.test(n)&&!/(can thu|can chi|phai thu|phai chi)/.test(n)?text.trim().slice(0,140):undefined;
+   return {...draft,...(amount?{amount}:{}),...(date?{dueDate:date}:{}),...((cleaned||directTitle)?{title:(cleaned||directTitle)!.slice(0,140)}:{})};
+ }
  if(draft.kind==='phuong'){
   const freq:PhuongCycle|undefined=/\b(phuong ngay|hui ngay|hang ngay|moi ngay|ngay\/ngay|\/ngay)\b/.test(n)?'daily':/\b(phuong tuan|hang tuan|moi tuan|\/tuan)\b/.test(n)?'weekly':/\b(phuong thang|hang thang|moi thang|\/thang)\b/.test(n)?'monthly':undefined;
   const rounds=capture(/(\d{1,3})\s*(?:ky|chân|chan|ngay gop|lan gop)\b/,n);
@@ -100,6 +112,12 @@ function missing(d:Draft,data:FinanceData):string|null{
   if(!d.date)return 'Ngày thực tế bạn đóng hoặc lĩnh tiền là ngày nào? Bạn có thể nói **hôm nay**.';
   return null;
  }
+ if(d.kind==='cash_plan'){
+  if(!d.amount)return 'Khoản này dự kiến '+(d.direction==='in'?'thu':'chi')+' bao nhiêu tiền? Ví dụ **3 triệu**.';
+  if(!d.dueDate)return 'Bạn dự kiến '+(d.direction==='in'?'nhận':'thanh toán')+' ngày nào? Có thể nói **ngày mai** hoặc **20/10/2026**.';
+  if(!d.title)return 'Mình nên đặt tên lịch này là gì? Ví dụ **Tiền khách trả đơn hàng**.';
+  return null;
+ }
  if(d.kind==='transaction'){
   if(!d.amount)return 'Bạn đã '+(d.type==='income'?'nhận':'chi')+' bao nhiêu? Ví dụ **120.000đ**.';
   if(!d.date)return 'Giao dịch xảy ra ngày nào? Bạn có thể nói **hôm nay**.';
@@ -111,6 +129,7 @@ function missing(d:Draft,data:FinanceData):string|null{
  return null;
 }
 function proposal(d:Draft,data:FinanceData,today:string):ProposedRecord{
+ if(d.kind==='cash_plan')return {kind:'cash_plan',plan:{id:crypto.randomUUID(),title:d.title!,direction:d.direction,amount:d.amount!,dueDate:d.dueDate!,status:'planned',note:'Tạo từ hội thoại; chưa phải giao dịch thực tế.'}};
  if(d.kind==='phuong'){
   return {kind:'phuong',group:{
    id:crypto.randomUUID(),name:d.name||'Dây phường '+(d.cycle==='daily'?'ngày':d.cycle==='weekly'?'tuần':'tháng'),
@@ -129,6 +148,7 @@ function proposal(d:Draft,data:FinanceData,today:string):ProposedRecord{
  return {kind:'debt',debt:{id:crypto.randomUUID(),name:d.name||'Khoản vay được khai báo',lender:'',kind:d.debtKind||'other',original:d.balance!,balance:d.balance!,apr:d.apr||0,minimum:d.minimum||0,dueDay:d.dueDay!,createdAt:today,note:'Ghi bằng hội thoại; kiểm tra lãi suất và mức tối thiểu nếu chưa khai báo.'}};
 }
 function describe(p:ProposedRecord,data:FinanceData){
+ if(p.kind==='cash_plan')return '📅 **Lịch '+(p.plan.direction==='in'?'cần thu':'cần chi')+' dự kiến**\n'+p.plan.title+' · '+money(p.plan.amount)+'\nNgày '+p.plan.dueDate+'\n*Chưa ghi dòng tiền thực tế; nhắn **xác nhận** để lưu lịch.*';
  if(p.kind==='phuong'){
   const g=p.group;return '📋 **Dây phường chuẩn bị lưu**\n'+
    'Tên: '+g.name+'\nGóp: '+money(g.contribution)+' / '+(g.cycle==='daily'?'ngày':g.cycle==='weekly'?'tuần':'tháng')+
@@ -154,6 +174,14 @@ export function agentTurn(input:string,current:Draft|null,data:FinanceData,today
   const p=proposal(current,data,today);
   return {text:'Mình đã nhận xác nhận. Mình sẽ lưu bản ghi này vào Quản gia và cập nhật lịch theo dõi.',draft:null,proposal:p};
  }
+ if(/\b(lich thu chi|lich tai chinh|lich hom nay|hom nay co khoan|can thu gi|can chi gi)\b/.test(n) && /\b(xem|co|nao|gi|bao nhieu|nhung|lich)\b/.test(n)){
+  const items=calendarTodaysEvents(data,today);
+  const v=calendarTotals(items);
+  return {draft:current,text:'📅 Lịch ngày '+today+':\n• Cần chi: '+money(v.plannedOut)+'\n• Dự kiến thu: '+money(v.plannedIn)+
+   '\n• Đã chi: '+money(v.actualOut)+'\n• Đã thu: '+money(v.actualIn)+
+   (items.length?'\n\nCác khoản nổi bật:\n'+items.filter(e=>e.kind==='planned-out'||e.kind==='planned-in').slice(0,5).map(e=>'• '+e.title+' — '+(e.amount?money(e.amount):'chưa rõ')).join('\n'):'\n\nChưa có bản ghi nào cho hôm nay.')+
+   '\nBạn có thể mở tab **Lịch tài chính** để xem chi tiết từng ngày.'};
+ }
  const started=startAgentDraft(input,data,today);
  // New explicit intent can start a different record; follow-up with only supplemental info retains draft.
  const next=started&&(!current||started.kind!==current.kind)?started:current||started;
@@ -177,7 +205,7 @@ export function agentTurn(input:string,current:Draft|null,data:FinanceData,today
   const s=analyzeSpending(data,today);
   return {draft:null,text:s.configured?'💡 Theo thu nhập và nghĩa vụ đã khai báo, bạn còn khoảng '+money(s.freeFlexible)+' chi linh hoạt trong tháng. Mức chia đều cho '+s.daysLeft+' ngày là '+money(s.dailyFlexible)+'/ngày. Đây là ước tính, không phải số dư tài khoản.':'Bạn chưa khai báo thu nhập tháng. Hãy nhắn như “thu nhập tháng của tôi…” để mình biết cần bổ sung gì, hoặc vào Cài đặt thiết lập thu nhập.'};
  }
- return {draft:null,text:'Mình đang lắng nghe. Bạn có thể nói tự nhiên, chẳng hạn:\n• “Tôi chơi phường ngày 200k, 30 kỳ từ 15/10, lĩnh kỳ 12.”\n• “Hôm nay chi 120k ăn sáng.”\n• “Tôi còn khoản vay 15 triệu, trả ngày 20.”\n• “Tuần này có khoản nào sắp đến hạn?”\n\nMình hỏi tiếp nếu thiếu thông tin và chỉ ghi khi bạn xác nhận. Hiện khả năng hiểu tự nhiên dựa trên quy tắc, chưa kết nối mô hình AI bên ngoài.'};
+ return {draft:null,text:'Mình đang lắng nghe. Bạn có thể nói tự nhiên, chẳng hạn:\n• “Tôi chơi phường ngày 200k, 30 kỳ từ 15/10, lĩnh kỳ 12.”\n• “Hôm nay chi 120k ăn sáng.”\n• “Tôi còn khoản vay 15 triệu, trả ngày 20.”\n• “Tuần này có khoản nào sắp đến hạn?”\n• “20/10 cần thu 3 triệu tiền hàng.”\n\nMình hỏi tiếp nếu thiếu thông tin và chỉ ghi khi bạn xác nhận. Hiện khả năng hiểu tự nhiên dựa trên quy tắc, chưa kết nối mô hình AI bên ngoài.'};
 }
 export function commitProposal(data:FinanceData,p:ProposedRecord):FinanceData{
  switch(p.kind){
@@ -185,5 +213,6 @@ export function commitProposal(data:FinanceData,p:ProposedRecord):FinanceData{
   case 'phuong_entry':return {...data,phuongEntries:[...(data.phuongEntries||[]),p.entry]};
   case 'transaction':return {...data,transactions:[...data.transactions,p.transaction]};
   case 'debt':return {...data,debts:[...data.debts,p.debt]};
+  case 'cash_plan':return {...data,cashPlans:[...(data.cashPlans||[]),p.plan]};
  }
 }

@@ -52,7 +52,7 @@ func (a *server) mcp(w http.ResponseWriter, r *http.Request, s session) {
 	case "tools/list":
 		result = map[string]any{"tools": []any{
 			map[string]any{"name": "get_financial_summary", "description": "Read-only financial summary for the authenticated account; amounts in VND.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}, "additionalProperties": false}},
-			map[string]any{"name": "list_upcoming_payments", "description": "Read-only upcoming debt and rollover deadlines, 30 days. Dates are approximate for recurring debts.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}, "additionalProperties": false}},
+			map[string]any{"name": "list_upcoming_payments", "description": "Read-only upcoming debt deadlines, rollover markers and scheduled payables/receivables within 30 days. Expected cash is not bank-verified.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}, "additionalProperties": false}},
 			map[string]any{"name": "suggest_spending_budget", "description": "Read-only budget guidance using user-provided monthly income, essentials, reserve and debt minimums.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}, "additionalProperties": false}},
 			map[string]any{"name": "analyze_spending_behavior", "description": "Read-only aggregated spending habits and estimated discretionary budget; never returns raw transaction notes.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}, "additionalProperties": false}},
 		}}
@@ -186,6 +186,16 @@ func mcpFinanceOutputAt(d finance.Data, tool string, now time.Time) any {
 	debtNames := map[string]string{}
 	for _, v := range d.Debts {
 		debtNames[v.ID] = v.Name
+	}
+	for _, plan := range d.CashPlans {
+		if plan.Status != "planned" || plan.DueDate < today || plan.DueDate > end {
+			continue
+		}
+		kind := "scheduled_payable"
+		if plan.Direction == "in" {
+			kind = "scheduled_receivable"
+		}
+		upcoming = append(upcoming, due{Name: plan.Title, Date: plan.DueDate, Amount: plan.Amount, Kind: kind})
 	}
 	for _, v := range d.Rollovers {
 		if v.Status == "planned" && v.DueDate <= end {

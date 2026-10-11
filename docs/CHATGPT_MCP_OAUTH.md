@@ -4,7 +4,7 @@
 
 Thông báo **“Không thể tự động xác định cài đặt OAuth”** xảy ra khi ChatGPT không thể khám phá được OAuth Protected Resource Metadata (RFC 9728) và Authorization Server Metadata (RFC 8414). Trước nhánh này, `POST /mcp` chỉ yêu cầu một bearer token của ứng dụng, không có OAuth.
 
-Ngoài ra, Railway đang báo tên miền `api-quan-gia.codelocal.cloud` có trạng thái DNS `DNS_RECORD_STATUS_REQUIRES_UPDATE` dù chứng chỉ TLS hợp lệ. Cần kiểm tra Cloudflare DNS: CNAME host `api-quan-gia` trỏ tới `9g6da5hd.up.railway.app` (giá trị do Railway hiển thị 12/10/2026; luôn đối chiếu lại ở Railway trước khi sửa).
+Ngoài ra, Railway có thể hiển thị tên miền `api-quan-gia.codelocal.cloud` với cảnh báo DNS `DNS_RECORD_STATUS_REQUIRES_UPDATE` dù chứng chỉ TLS hợp lệ. Cần kiểm tra Cloudflare DNS: CNAME host `api-quan-gia` trỏ tới `9g6da5hd.up.railway.app` (giá trị do Railway hiển thị 12/10/2026; luôn đối chiếu lại ở Railway trước khi sửa).
 
 ## Cơ chế backend đã code
 

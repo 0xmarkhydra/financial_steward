@@ -2,8 +2,8 @@
 // Usage: node scripts/staging-smoke.mjs
 import { randomBytes } from 'node:crypto';
 
-const origin = process.env.SMOKE_WEB_URL || 'https://frontend-staging-2146.up.railway.app';
-const api = process.env.SMOKE_API_URL || 'https://api-staging-706c3.up.railway.app';
+const origin = process.env.SMOKE_WEB_URL || 'https://quan-gia.codelocal.cloud';
+const api = process.env.SMOKE_API_URL || 'https://api-quan-gia.codelocal.cloud';
 const runId = Date.now().toString(36) + '-' + randomBytes(4).toString('hex');
 const email = 'steward-smoke-' + runId + '@example.invalid';
 const password = 'Smoke!' + randomBytes(20).toString('hex');

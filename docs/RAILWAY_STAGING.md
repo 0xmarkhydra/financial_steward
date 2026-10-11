@@ -10,13 +10,15 @@ Services:
 - `frontend`: React/Vite static PWA, Dockerfile: `Dockerfile`, root: `/`, healthcheck `/`.
 
 Endpoints:
-- Web: https://frontend-staging-2146.up.railway.app
-- API: https://api-staging-706c3.up.railway.app
-- API healthcheck: https://api-staging-706c3.up.railway.app/healthz
+- Web: https://quan-gia.codelocal.cloud
+- API: https://api-quan-gia.codelocal.cloud
+- API healthcheck: https://api-quan-gia.codelocal.cloud/healthz
+- OAuth protected resource: https://api-quan-gia.codelocal.cloud/.well-known/oauth-protected-resource/mcp
 
 Staging variables (never commit actual passwords or connection URLs):
-- `api`: `DATABASE_URL=${{Postgres.DATABASE_URL}}`; `APP_ENV=production`; `CORS_ORIGINS=https://frontend-staging-2146.up.railway.app`; `PORT=8080`.
-- `frontend`: `VITE_API_URL=https://api-staging-706c3.up.railway.app`; `PORT=8080`.
+- `api`: `DATABASE_URL=${{Postgres.DATABASE_URL}}`; `APP_ENV=production`; `CORS_ORIGINS=https://quan-gia.codelocal.cloud`; `PORT=8080`.
+- `api`: `MCP_PUBLIC_ORIGIN=https://api-quan-gia.codelocal.cloud` (OAuth issuer and MCP resource are on the same origin).
+- `frontend`: `VITE_API_URL=https://api-quan-gia.codelocal.cloud`; `PORT=8080`.
 
 Deploy explicitly to staging (avoid deploying other environments):
 ```bash
@@ -29,7 +31,7 @@ railway deployment list --service frontend --environment staging --json
 
 ## Staging acceptance checks
 
-Run `npm run smoke:staging` to execute 18 automated integration checks against HTTPS frontend, API, PostgreSQL, login, logout, revision-conflict protection, PWA assets and CORS. The disposable account is deleted automatically. Run the same suite manually via the GitHub Actions `Staging integration smoke test` workflow (`workflow_dispatch`).
+Run `npm run smoke:staging` to execute 20 automated integration checks against HTTPS frontend, API, PostgreSQL, login, logout, revision-conflict protection, PWA assets and CORS. The disposable account is deleted automatically. Run the same suite manually via the GitHub Actions `Staging integration smoke test` workflow (`workflow_dispatch`).
 
 On iPhone, open the staging website in Safari, use Share > Add to Home Screen, launch the standalone app and test login and navigation on the actual device. Chrome Android: choose Install app. There is no connected mobile test device at present, so real-device install testing remains an acceptance gate.
 

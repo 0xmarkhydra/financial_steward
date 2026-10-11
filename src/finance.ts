@@ -13,7 +13,12 @@ export function monthStats(data: FinanceData, month: string) {
   const income=total(trans.filter(t=>t.type==='income').map(t=>t.amount));
   const expense=total(trans.filter(t=>t.type==='expense').map(t=>t.amount));
   const debtPaid=total(pay.map(p=>p.principal+p.interest+p.fee));
-  return {income,expense,debtPaid,remaining: income-expense-debtPaid,principalPaid:total(pay.map(p=>p.principal)),interestPaid:total(pay.map(p=>p.interest+p.fee))};
+  const phuong=(data.phuongEntries||[]).filter(e=>monthKey(e.date)===month);
+  const phuongReceived=total(phuong.filter(e=>e.kind==='payout').map(e=>e.amount));
+  const phuongPaid=total(phuong.filter(e=>e.kind==='contribution'||e.kind==='fee').map(e=>e.amount));
+  return {income,expense,debtPaid,phuongReceived,phuongPaid,
+    remaining:income+phuongReceived-expense-debtPaid-phuongPaid,
+    principalPaid:total(pay.map(p=>p.principal)),interestPaid:total(pay.map(p=>p.interest+p.fee))};
 }
 export function dueDate(debt:Debt,today=localISO()) {
   const [y,m,d]=today.split('-').map(Number);

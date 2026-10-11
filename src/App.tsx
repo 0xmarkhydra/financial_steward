@@ -15,20 +15,24 @@ import { DEBT_KINDS, EMPTY_DATA, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '.
 import { addMonths, dateLabel, daysUntil, debtOrder, dueDate, forecast, lastMonths, localISO, money, monthStats, shortMoney, spendByCategory, thisMonth, total } from './finance';
 import { exportData, parseData } from './storage';
 import RolloverPage from './RolloverPage';
-import AgentPage from './AgentPage';
+import ChatAgent from './ChatAgent';
+import PhuongPage from './PhuongPage';
+import {agentTurn,commitProposal} from './agentConversation';
+import type {Draft} from './agentConversation';
 import MCPPage from './MCPPage';
 import SpendingCoachPage from './SpendingCoachPage';
 import DebtCommandPage from './DebtCommandPage';
 import {financeReminders} from './debtCommand';
 import { analyzeSpending } from './spendingCoach';
 
-type Page='command'|'overview'|'debts'|'rollovers'|'agent'|'coach'|'mcp'|'transactions'|'budgets'|'plan'|'settings';
+type Page='phuong'|'command'|'overview'|'debts'|'rollovers'|'agent'|'coach'|'mcp'|'transactions'|'budgets'|'plan'|'settings';
 type Modal='debt'|'transaction'|'payment'|'budget'|'account'|null;
 const NAV: {id:Page; label:string; icon:typeof LayoutDashboard}[]=[
   {id:'overview',label:'Tổng quan',icon:LayoutDashboard},
   {id:'command',label:'Trung tâm quản trị nợ',icon:Bell},
   {id:'debts',label:'Khoản nợ',icon:CreditCard},
   {id:'rollovers',label:'Đáo hạn thẻ & nợ',icon:CalendarDays},
+  {id:'phuong',label:'Phường ngày · Họ/Hụi',icon:Wallet},
   {id:'agent',label:'Trợ lý AI',icon:Sparkles},
   {id:'coach',label:'Thói quen chi tiêu',icon:NotebookPen},
   {id:'mcp',label:'Kết nối ChatGPT',icon:Link2},
@@ -72,6 +76,8 @@ export default function App({initialData,persist,accountEmail,onLogout,onDeleteA
   const [selectedDebt,setSelectedDebt]=useState('');
   const [sideOpen,setSideOpen]=useState(false);
   const [toast,setToast]=useState('');
+  const [chatDockOpen,setChatDockOpen]=useState(false);
+  const [agentDraft,setAgentDraft]=useState<Draft|null>(null);
   const [showBalances,setShowBalances]=useState(true);
   const fileInput=useRef<HTMLInputElement>(null);
   useEffect(()=>{if(data!==initialDataRef.current)persist(data);},[data,persist]);
@@ -139,6 +145,19 @@ export default function App({initialData,persist,accountEmail,onLogout,onDeleteA
     setData(prev=>({...prev,payments:[...prev.payments,payment],debts:prev.debts.map(d=>d.id===debtId?{...d,balance:d.balance-principal}:d)}));
     success('Đã ghi thanh toán và cập nhật dư nợ gốc.');
   }
+  function onAgentMessage(text:string){
+    const reply=agentTurn(text,agentDraft,data,today);
+    setAgentDraft(reply.draft);
+    const createdAt=today;
+    setData(prev=>{
+      const next=reply.proposal?commitProposal(prev,reply.proposal):prev;
+      const messages=[...(prev.agentChat||[]),
+        {id:crypto.randomUUID(),role:'user' as const,content:text.slice(0,1200),createdAt},
+        {id:crypto.randomUUID(),role:'assistant' as const,content:reply.text.slice(0,1200),createdAt}].slice(-120);
+      return {...next,agentChat:messages};
+    });
+    if(reply.proposal)setToast('Đã thêm bản ghi tại ứng dụng. Kiểm tra trạng thái đồng bộ máy chủ.');
+  }
   function applySuggestedBudget(category:string,limit:number){
     setData(prev=>({...prev,budgets:[...prev.budgets.filter(b=>b.category!==category),{category,limit}]}));
     setToast('Đã lưu hạn mức '+category+'.');
@@ -195,7 +214,8 @@ export default function App({initialData,persist,accountEmail,onLogout,onDeleteA
       </>}
       {page==='command'&&<DebtCommandPage data={data} asOf={today} onNavigate={goto}/>}
       {page==='rollovers'&&<RolloverPage data={data} onChange={setData}/>}
-      {page==='agent'&&<AgentPage data={data}/>}
+      {page==='agent'&&<ChatAgent history={data.agentChat||[]} onSend={onAgentMessage}/>}
+      {page==='phuong'&&<PhuongPage data={data} onChat={()=>{setPage('agent');setChatDockOpen(false);}}/>}
       {page==='coach'&&<SpendingCoachPage data={data} onRecord={()=>open('transaction')} onSettings={()=>goto('settings')} onApplyBudget={applySuggestedBudget}/>}
       {page==='mcp'&&<MCPPage/>}
       {page==='debts'&&<>
@@ -233,7 +253,8 @@ export default function App({initialData,persist,accountEmail,onLogout,onDeleteA
       <footer className="main-footer">Financial Steward <span>·</span> Từng quyết định nhỏ, một tương lai tài chính vững hơn. <span>·</span> Dữ liệu đồng bộ tài khoản</footer>
       </main>
     </div>
-    <nav className="mobile-bottom-nav" aria-label="Điều hướng nhanh">{NAV.filter(item=>['overview','command','debts','transactions','coach'].includes(item.id)).map(item=>{const Icon=item.icon;return <button key={item.id} className={page===item.id?'active':''} onClick={()=>goto(item.id)}><Icon size={20}/><span>{item.id==='transactions'?'Thu chi':item.id==='overview'?'Tổng quan':item.id==='debts'?'Nợ':item.id==='command'?'Nhắc nợ':item.id==='coach'?'Thói quen':'Thu chi'}</span></button>})}</nav>
+    <nav className="mobile-bottom-nav" aria-label="Điều hướng nhanh">{NAV.filter(item=>['overview','command','debts','transactions','phuong'].includes(item.id)).map(item=>{const Icon=item.icon;return <button key={item.id} className={page===item.id?'active':''} onClick={()=>goto(item.id)}><Icon size={20}/><span>{item.id==='transactions'?'Thu chi':item.id==='overview'?'Tổng quan':item.id==='debts'?'Nợ':item.id==='command'?'Nhắc nợ':item.id==='phuong'?'Phường':'Thu chi'}</span></button>})}</nav>
+    {page!=='agent'&&<div className="agent-dock">{chatDockOpen?<ChatAgent history={data.agentChat||[]} onSend={onAgentMessage} compact onClose={()=>setChatDockOpen(false)}/>:<button type="button" className="agent-dock-trigger" onClick={()=>setChatDockOpen(true)} aria-label="Trò chuyện với Quản gia"><Sparkles size={23}/><span>Hỏi Quản gia</span></button>}</div>}
     {toast&&<div className="toast" role="status"><CheckCircle2 size={18}/>{toast}<button onClick={()=>setToast('')} aria-label="Đóng thông báo"><X size={15}/></button></div>}
     {modal&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setModal(null)}}><div className="modal" role="dialog" aria-modal="true" aria-label={modal==='debt'?'Khoản nợ':modal==='transaction'?'Giao dịch':modal==='payment'?'Thanh toán':modal==='account'?'Xóa tài khoản':'Ngân sách'}><div className="modal-header"><div><div className="eyebrow">{modal==='debt'?'DỮ LIỆU KHOẢN NỢ':modal==='transaction'?'SỔ THU CHI':modal==='payment'?'TRẢ NỢ':modal==='account'?'BẢO MẬT TÀI KHOẢN':'QUẢN LÝ NGÂN SÁCH'}</div><h2>{modal==='debt'?(editingDebt?'Chỉnh sửa khoản nợ':'Thêm khoản nợ mới'):modal==='transaction'?(editingTransaction?'Sửa giao dịch':'Ghi giao dịch mới'):modal==='payment'?'Ghi nhận thanh toán':modal==='account'?'Xóa tài khoản':'Thiết lập ngân sách'}</h2></div><button className="icon-btn" onClick={()=>setModal(null)} aria-label="Đóng"><X size={22}/></button></div>
     {modal==='debt'&&<form className="modal-form" onSubmit={onDebtSubmit} key={editingDebt?.id||'new'}><Field label="Tên khoản nợ"><input name="name" autoFocus required maxLength={140} defaultValue={editingDebt?.name} placeholder="VD: Vay ngân hàng, thẻ tín dụng..."/></Field><div className="form-two"><Field label="Nhóm nợ"><select name="kind" defaultValue={editingDebt?.kind||'bank'}>{Object.entries(DEBT_KINDS).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></Field><Field label="Người / tổ chức cho vay"><input name="lender" maxLength={140} defaultValue={editingDebt?.lender} placeholder="VD: Ngân hàng ABC"/></Field></div><Field label="Dư nợ gốc hiện tại" hint="Số dư đang nợ tại thời điểm nhập. Khi ghi trả gốc, dư nợ sẽ tự giảm."><CurrencyInput name="balance" defaultValue={editingDebt?.balance}/></Field><div className="form-two"><Field label="Lãi suất (% / năm)"><input type="number" name="apr" min="0" max="1000" step="0.01" required defaultValue={editingDebt?.apr||0}/></Field><Field label="Thanh toán tối thiểu / tháng"><CurrencyInput name="minimum" defaultValue={editingDebt?.minimum||0}/></Field></div><Field label="Ngày đến hạn mỗi tháng"><select name="dueDay" defaultValue={editingDebt?.dueDay||10}>{Array.from({length:31},(_,i)=><option value={i+1} key={i}>Ngày {i+1}</option>)}</select></Field><div className="form-two"><Field label="Ngày đóng lãi mỗi tháng (nếu riêng)"><select name="interestDueDay" defaultValue={editingDebt?.interestDueDay||0}><option value="0">Không theo dõi riêng</option>{Array.from({length:31},(_,i)=><option key={i+1} value={i+1}>Ngày {i+1}</option>)}</select></Field><Field label="Tiền lãi dự kiến / tháng (VNĐ)"><CurrencyInput name="interestExpected" required={false} defaultValue={editingDebt?.interestExpected||0}/></Field></div><div className="modal-tip"><CircleAlert size={17}/> Chỉ khai báo lãi nếu có ngày đóng lãi riêng. Lãi dự kiến có thể đã nằm trong mức trả tối thiểu, không được cộng hai khoản để tính tổng tiền phải trả.</div><Field label="Ghi chú (không nhập thông tin tài khoản nhạy cảm)"><textarea name="note" rows={2} maxLength={2000} defaultValue={editingDebt?.note} placeholder="Thông tin bổ sung..."/></Field><div className="modal-actions"><button type="button" className="btn outline" onClick={()=>setModal(null)}>Hủy</button><button type="submit" className="btn primary"><Check size={17}/>{editingDebt?'Lưu thay đổi':'Thêm khoản nợ'}</button></div></form>}

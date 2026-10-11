@@ -128,6 +128,35 @@ try {
       'Interest schedule was not persisted');
     expected(restored.data.data.payments.some(p=>p.id===payment.id&&p.period==='2026-09'), 'Repayment period not persisted');
   });
+  await check('Daily phuong contributions, chat history and audit persist',async()=>{
+    const before=await request('/api/v1/state');
+    expected(before.status===200,'Cannot read state before daily phuong test');
+    const groupId=crypto.randomUUID(),entryId=crypto.randomUUID();
+    const group={id:groupId,name:'Daily phuong smoke',organizer:'',role:'member',contribution:200000,cycle:'daily',
+      startDate:'2026-10-12',rounds:30,payoutRound:12,status:'active',note:'Synthetic test only'};
+    const entry={id:entryId,groupId,date:'2026-10-12',round:1,kind:'contribution',amount:200000,note:''};
+    const agentChat=[...(before.data.data.agentChat||[]),
+      {id:crypto.randomUUID(),role:'user',content:'Tôi chơi phường ngày 200k 30 kỳ',createdAt:'2026-10-12'},
+      {id:crypto.randomUUID(),role:'assistant',content:'Đã ghi sau khi xác nhận',createdAt:'2026-10-12'}];
+    const updated={...before.data.data,
+      phuongGroups:[...(before.data.data.phuongGroups||[]),group],
+      phuongEntries:[...(before.data.data.phuongEntries||[]),entry],agentChat};
+    const saved=await request('/api/v1/state','PUT',{data:updated,revision:before.data.revision});
+    expected(saved.status===200,'Daily phuong save failed '+saved.status+' '+JSON.stringify(saved.data));
+    const stateCheck=await request('/api/v1/state');
+    expected(stateCheck.data.data.phuongGroups.some(g=>g.id===groupId&&g.cycle==='daily'),'Daily phuong group not stored');
+    expected(stateCheck.data.data.phuongEntries.some(e=>e.id===entryId&&e.round===1),'Daily contribution not stored');
+    expected(stateCheck.data.data.agentChat.some(m=>m.content.includes('phường ngày')),'Conversation history not stored');
+    const journal=await request('/api/v1/journal');
+    expected(journal.data.events.some(e=>e.eventType==='phuong_group'&&e.action==='created'),'Missing phuong group audit');
+    expected(journal.data.events.some(e=>e.eventType==='phuong_entry'&&e.action==='created'),'Missing phuong payment audit');
+    expected(!JSON.stringify(journal.data.events).includes('Tôi chơi phường ngày'),'Chat text must not leak into audit');
+  });
+  await check('MCP budget reserves daily phuong contributions',async()=>{
+    const r=await request('/mcp','POST',{jsonrpc:'2.0',id:4,method:'tools/call',params:{name:'suggest_spending_budget',arguments:{}}});
+    const output=JSON.parse(r.data.result.content[0].text);
+    expected(output.phuongCommitmentThisMonth===4000000,'MCP failed to reserve 20 daily October contributions: '+output.phuongCommitmentThisMonth);
+  });
   await check('Stale revision update blocked', async () => {
     const r=await request('/api/v1/state','PUT',{data:state.data,revision:state.revision});
     expected(r.status===409,'Expected revision conflict 409, got '+r.status);

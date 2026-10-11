@@ -1,4 +1,4 @@
-import type { FinanceData, Debt, Transaction, Payment, Budget, Preferences, Rollover } from './types';
+import type { FinanceData, Debt, Transaction, Payment, Budget, Preferences, Rollover, PhuongGroup, PhuongEntry, AgentMessage } from './types';
 import { EMPTY_DATA, DEBT_KINDS } from './types';
 export const STORAGE_KEY = 'financial-steward-v1';
 const obj=(x:unknown): x is Record<string,unknown>=>typeof x==='object'&&x!==null&&!Array.isArray(x);
@@ -20,6 +20,15 @@ function validPayment(p:unknown):p is Payment {
 function validBudget(b:unknown):b is Budget {return obj(b)&&str(b.category,100)&&num(b.limit);}
 function validPreferences(p:unknown):p is Preferences {return obj(p)&&num(p.monthlyIncome)&&num(p.essentials)&&num(p.reserve)&&(p.strategy==='avalanche'||p.strategy==='snowball');}
 function validRollover(v:unknown):v is Rollover{return obj(v)&&id(v.id)&&id(v.debtId)&&(v.kind==='card'||v.kind==='loan')&&date(v.dueDate)&&num(v.amount)&&v.amount>0&&num(v.fee)&&['own','bank_transfer','refinance','other'].includes(String(v.funding))&&['planned','completed','cancelled'].includes(String(v.status))&&(v.completedAt===''||date(v.completedAt))&&str(v.note,2000);}
+function validPhuongGroup(v:unknown):v is PhuongGroup {
+ return obj(v)&&id(v.id)&&str(v.name,140)&&Boolean(v.name)&&str(v.organizer,140)&&['member','organizer'].includes(String(v.role))&&num(v.contribution)&&v.contribution>0&&['daily','weekly','monthly'].includes(String(v.cycle))&&date(v.startDate)&&typeof v.rounds==='number'&&Number.isInteger(v.rounds)&&v.rounds>=1&&v.rounds<=520&&(v.payoutRound===undefined||(typeof v.payoutRound==='number'&&Number.isInteger(v.payoutRound)&&v.payoutRound>=1&&v.payoutRound<=v.rounds))&&(v.payoutExpected===undefined||num(v.payoutExpected))&&['active','paused','completed'].includes(String(v.status))&&str(v.note,2000);
+}
+function validPhuongEntry(v:unknown):v is PhuongEntry{
+ return obj(v)&&id(v.id)&&id(v.groupId)&&date(v.date)&&typeof v.round==='number'&&Number.isInteger(v.round)&&v.round>=1&&v.round<=520&&['contribution','payout','fee'].includes(String(v.kind))&&num(v.amount)&&v.amount>0&&str(v.note,2000);
+}
+function validAgentMessage(v:unknown):v is AgentMessage{
+ return obj(v)&&id(v.id)&&['user','assistant'].includes(String(v.role))&&str(v.content,1200)&&Boolean(v.content)&&date(v.createdAt);
+}
 export function parseData(input:unknown):FinanceData {
   if(!obj(input)||input.version!==1||!Array.isArray(input.debts)||!Array.isArray(input.transactions)||!Array.isArray(input.payments)||!Array.isArray(input.budgets)||!validPreferences(input.preferences)) throw new Error('Tệp không đúng định dạng Financial Steward.');
   if(input.debts.length>10000||input.transactions.length>100000||input.payments.length>100000||input.budgets.length>1000)throw new Error('Tệp dữ liệu vượt giới hạn.');
@@ -30,7 +39,13 @@ export function parseData(input:unknown):FinanceData {
   if(payments.some(p=>!debts.some(d=>d.id===p.debtId)))throw new Error('Có thanh toán không thuộc khoản nợ nào.');
   const rollovers=input.rollovers===undefined?[]:input.rollovers;
   if(!Array.isArray(rollovers)||rollovers.length>10000||!rollovers.every(validRollover)||!uniques(rollovers.map(v=>v.id))||rollovers.some(v=>!debts.some(d=>d.id===v.debtId)))throw new Error('Dữ liệu đáo hạn không hợp lệ.');
-  return {version:1,debts,transactions,payments,budgets,preferences:input.preferences as Preferences,rollovers};
+  const phuongGroups=input.phuongGroups===undefined?[]:input.phuongGroups;
+  const phuongEntries=input.phuongEntries===undefined?[]:input.phuongEntries;
+  const agentChat=input.agentChat===undefined?[]:input.agentChat;
+  if(!Array.isArray(phuongGroups)||phuongGroups.length>500||!phuongGroups.every(validPhuongGroup)||!uniques(phuongGroups.map(g=>g.id)))throw new Error('Dữ liệu dây phường không hợp lệ.');
+  if(!Array.isArray(phuongEntries)||phuongEntries.length>20000||!phuongEntries.every(validPhuongEntry)||!uniques(phuongEntries.map(e=>e.id))||phuongEntries.some(e=>!phuongGroups.some(g=>g.id===e.groupId&&e.round<=g.rounds)))throw new Error('Dữ liệu góp/lĩnh phường không hợp lệ.');
+  if(!Array.isArray(agentChat)||agentChat.length>150||!agentChat.every(validAgentMessage)||!uniques(agentChat.map(m=>m.id)))throw new Error('Lịch sử hội thoại không hợp lệ.');
+  return {version:1,debts,transactions,payments,budgets,preferences:input.preferences as Preferences,rollovers,phuongGroups,phuongEntries,agentChat};
 }
 export function loadData():FinanceData {
   try {const raw=localStorage.getItem(STORAGE_KEY);return raw?parseData(JSON.parse(raw)):structuredClone(EMPTY_DATA);}

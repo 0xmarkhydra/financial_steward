@@ -7,11 +7,11 @@ import {dateLabel,money} from './finance';
 import {financeReminders,financialLedger,judgeFinancePatterns} from './debtCommand';
 import type {FinanceReminder,LedgerEvent} from './debtCommand';
 
-export default function DebtCommandPage({data,asOf,onNavigate}:{data:FinanceData;asOf:string;onNavigate:(page:'debts'|'rollovers'|'budgets'|'transactions'|'coach')=>void}){
+export default function DebtCommandPage({data,asOf,onNavigate}:{data:FinanceData;asOf:string;onNavigate:(page:'debts'|'rollovers'|'budgets'|'transactions'|'coach'|'phuong')=>void}){
   const reminders=useMemo(()=>financeReminders(data,asOf),[data,asOf]);
   const ledger=useMemo(()=>financialLedger(data),[data]);
   const reviews=useMemo(()=>judgeFinancePatterns(data,asOf),[data,asOf]);
-  const [logFilter,setLogFilter]=useState<'all'|'income'|'expense'|'payment'|'rollover'>('all');
+  const [logFilter,setLogFilter]=useState<'all'|'income'|'expense'|'payment'|'rollover'|'phuong'>('all');
   const [showAll,setShowAll]=useState(false);
   const [journal,setJournal]=useState<JournalEntry[]|null>(null);
   const [journalError,setJournalError]=useState('');
@@ -51,7 +51,7 @@ export default function DebtCommandPage({data,asOf,onNavigate}:{data:FinanceData
     </section>
     <section className="panel command-section">
       <div className="command-header"><div><span className="eyebrow">NHẬT KÝ TÀI CHÍNH</span><h2><History size={20}/> Sổ cái giao dịch và lịch xử lý</h2></div><button className="btn outline" onClick={()=>onNavigate('transactions')}>Ghi thu / chi</button></div>
-      <div className="command-filters">{([{key:'all',label:'Tất cả'},{key:'income',label:'Tiền vào'},{key:'expense',label:'Tiền ra'},{key:'payment',label:'Trả gốc/lãi'},{key:'rollover',label:'Đáo hạn'}] as const).map(item=><button key={item.key} className={logFilter===item.key?'active':''} type="button" onClick={()=>{setLogFilter(item.key);setShowAll(false)}}>{item.label}</button>)}</div>
+      <div className="command-filters">{([{key:'all',label:'Tất cả'},{key:'income',label:'Tiền vào'},{key:'expense',label:'Tiền ra'},{key:'payment',label:'Trả gốc/lãi'},{key:'rollover',label:'Đáo hạn'},{key:'phuong',label:'Góp / lĩnh phường'}] as const).map(item=><button key={item.key} className={logFilter===item.key?'active':''} type="button" onClick={()=>{setLogFilter(item.key);setShowAll(false)}}>{item.label}</button>)}</div>
       {shown.length?<div className="command-ledger">{shown.map(row=><div className="command-ledger-row" key={row.id}>
         <div className={'command-ledger-icon '+row.direction}>{row.direction==='record'?<BookOpenCheck size={18}/>:row.direction==='planned'?<CalendarClock size={18}/>:<ClipboardList size={18}/>}</div>
         <div className="command-ledger-details"><strong>{row.title}</strong><small>{dateLabel(row.date)} · {row.detail}</small>{row.note&&<p>{row.note}</p>}{row.review&&<p className="command-row-review"><Lightbulb size={14}/>{row.review}</p>}</div>

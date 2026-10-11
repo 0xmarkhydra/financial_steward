@@ -71,14 +71,46 @@ type Rollover struct {
 	CompletedAt string  `json:"completedAt"`
 	Note        string  `json:"note"`
 }
+type PhuongGroup struct {
+	ID             string  `json:"id"`
+	Name           string  `json:"name"`
+	Organizer      string  `json:"organizer"`
+	Role           string  `json:"role"`
+	Contribution   float64 `json:"contribution"`
+	Cycle          string  `json:"cycle"`
+	StartDate      string  `json:"startDate"`
+	Rounds         int     `json:"rounds"`
+	PayoutRound    int     `json:"payoutRound,omitempty"`
+	PayoutExpected float64 `json:"payoutExpected,omitempty"`
+	Status         string  `json:"status"`
+	Note           string  `json:"note"`
+}
+type PhuongEntry struct {
+	ID      string  `json:"id"`
+	GroupID string  `json:"groupId"`
+	Date    string  `json:"date"`
+	Round   int     `json:"round"`
+	Kind    string  `json:"kind"`
+	Amount  float64 `json:"amount"`
+	Note    string  `json:"note"`
+}
+type AgentMessage struct {
+	ID        string `json:"id"`
+	Role      string `json:"role"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"createdAt"`
+}
 type Data struct {
-	Version      int           `json:"version"`
-	Debts        []Debt        `json:"debts"`
-	Transactions []Transaction `json:"transactions"`
-	Payments     []Payment     `json:"payments"`
-	Budgets      []Budget      `json:"budgets"`
-	Rollovers    []Rollover    `json:"rollovers,omitempty"`
-	Preferences  Preferences   `json:"preferences"`
+	Version       int            `json:"version"`
+	Debts         []Debt         `json:"debts"`
+	Transactions  []Transaction  `json:"transactions"`
+	Payments      []Payment      `json:"payments"`
+	Budgets       []Budget       `json:"budgets"`
+	Rollovers     []Rollover     `json:"rollovers,omitempty"`
+	PhuongGroups  []PhuongGroup  `json:"phuongGroups,omitempty"`
+	PhuongEntries []PhuongEntry  `json:"phuongEntries,omitempty"`
+	AgentChat     []AgentMessage `json:"agentChat,omitempty"`
+	Preferences   Preferences    `json:"preferences"`
 }
 
 func Empty() Data {
@@ -174,6 +206,41 @@ func (d Data) Validate() error {
 		}
 		if v.Status != "planned" && v.Status != "completed" && v.Status != "cancelled" {
 			return errors.New("invalid rollover status")
+		}
+	}
+	if len(d.PhuongGroups) > 500 || len(d.PhuongEntries) > 20000 || len(d.AgentChat) > 150 {
+		return errors.New("too many phuong or chat records")
+	}
+	ids = map[string]bool{}
+	groups := map[string]int{}
+	for _, v := range d.PhuongGroups {
+		if !unique(ids, v.ID) || strings.TrimSpace(v.Name) == "" || len(v.Name) > 140 || len(v.Organizer) > 140 || !amount(v.Contribution) || v.Contribution <= 0 || !validDate(v.StartDate) || v.Rounds < 1 || v.Rounds > 520 || v.PayoutRound < 0 || v.PayoutRound > v.Rounds || !amount(v.PayoutExpected) || len(v.Note) > 2000 {
+			return errors.New("invalid phuong group")
+		}
+		if v.Cycle != "daily" && v.Cycle != "weekly" && v.Cycle != "monthly" {
+			return errors.New("invalid phuong cycle")
+		}
+		if v.Role != "member" && v.Role != "organizer" {
+			return errors.New("invalid phuong role")
+		}
+		if v.Status != "active" && v.Status != "paused" && v.Status != "completed" {
+			return errors.New("invalid phuong status")
+		}
+		groups[v.ID] = v.Rounds
+	}
+	ids = map[string]bool{}
+	for _, v := range d.PhuongEntries {
+		if !unique(ids, v.ID) || !validDate(v.Date) || !amount(v.Amount) || v.Amount <= 0 || v.Round < 1 || v.Round > groups[v.GroupID] || len(v.Note) > 2000 {
+			return errors.New("invalid phuong event")
+		}
+		if v.Kind != "contribution" && v.Kind != "payout" && v.Kind != "fee" {
+			return errors.New("invalid phuong event kind")
+		}
+	}
+	ids = map[string]bool{}
+	for _, v := range d.AgentChat {
+		if !unique(ids, v.ID) || !validDate(v.CreatedAt) || len(v.Content) == 0 || len(v.Content) > 5000 || (v.Role != "user" && v.Role != "assistant") {
+			return errors.New("invalid chat message")
 		}
 	}
 	ids = map[string]bool{}

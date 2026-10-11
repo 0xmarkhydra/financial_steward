@@ -1,5 +1,6 @@
 import { addMonths, localISO, monthKey, total } from './finance';
 import type { FinanceData, Transaction } from './types';
+import { phuongMonthlyCommitment } from './phuong';
 
 export interface CategoryGuidance {
   category: string;
@@ -13,6 +14,7 @@ export interface SpendingAdvice {
   configured: boolean;
   monthlyIncome: number;
   minimumDebt: number;
+  phuongCommitment: number;
   reserve: number;
   essentialsPlan: number;
   monthlyLivingCap: number;
@@ -45,8 +47,9 @@ export function analyzeSpending(data:FinanceData, asOf=localISO()):SpendingAdvic
   const flexible=current.filter(t=>t.need!=='essential');
   const minimumDebt=total(data.debts.filter(d=>d.balance>0).map(d=>Math.min(d.minimum,d.balance)));
   const {monthlyIncome,essentials,reserve}=data.preferences;
+  const phuongCommitment=phuongMonthlyCommitment(data,month);
   const configured=monthlyIncome>0;
-  const monthlyLivingCap=Math.max(0,monthlyIncome-reserve-minimumDebt);
+  const monthlyLivingCap=Math.max(0,monthlyIncome-reserve-minimumDebt-phuongCommitment);
   const flexibleCap=Math.max(0,monthlyLivingCap-essentials);
   // Essential overspend must reduce the remaining flexible allowance as well.
   const excessEssential=Math.max(0,sum(essential)-essentials);
@@ -77,7 +80,7 @@ export function analyzeSpending(data:FinanceData, asOf=localISO()):SpendingAdvic
     });
   const alerts:SpendingAdvice['alerts']=[];
   if(!configured)alerts.push({level:'medium',title:'Thiết lập thu nhập để tính hạn mức',detail:'Điền thu nhập tháng, chi thiết yếu và quỹ dự phòng trong Cài đặt. Quản gia chưa thể đề xuất một mức chi an toàn khi thiếu thu nhập.'});
-  if(configured && monthlyIncome<reserve+minimumDebt+essentials)alerts.push({level:'high',title:'Thu nhập chưa đủ các khoản ưu tiên',detail:'Tiền dự phòng, nhu cầu thiết yếu và trả nợ tối thiểu vượt thu nhập dự kiến. Chưa nên tăng khoản chi không bắt buộc.'});
+  if(configured && monthlyIncome<reserve+minimumDebt+phuongCommitment+essentials)alerts.push({level:'high',title:'Thu nhập chưa đủ các khoản ưu tiên',detail:'Dự phòng, sinh hoạt, trả nợ tối thiểu và cam kết góp phường vượt thu nhập dự kiến. Chưa nên tăng khoản chi không bắt buộc.'});
   if(configured && sum(flexible)+excessEssential>flexibleCap)alerts.push({level:'high',title:'Đã vượt mức chi linh hoạt',detail:'Chi vượt hạn mức an toàn theo số liệu khai báo. Rà soát các khoản có thể hoãn trong phần nhật ký chi tiêu.'});
   const paceForecast=Math.round(sum(flexible)*daysInMonth/Math.max(1,day));
   if(configured && flexibleCap>0 && paceForecast>flexibleCap && sum(flexible)<=flexibleCap)alerts.push({level:'medium',title:'Tốc độ chi đang nhanh',detail:'Nếu duy trì mức chi từ đầu tháng, chi linh hoạt có thể vượt hạn mức trước cuối tháng. Đây là ước tính theo nhịp chi hiện tại.'});
@@ -88,7 +91,7 @@ export function analyzeSpending(data:FinanceData, asOf=localISO()):SpendingAdvic
   const currentBudgetAlerts=categoryGuidance.filter(c=>c.userLimit!==undefined&&c.actualThisMonth>c.userLimit);
   for(const c of currentBudgetAlerts)alerts.push({level:'medium',title:'Vượt ngân sách: '+c.category,detail:'Khoản chi danh mục này đã vượt hạn mức bạn tự thiết lập. Cân nhắc giảm chi trong phần còn lại của tháng.'});
   return {
-    month, configured, monthlyIncome, minimumDebt, reserve, essentialsPlan:essentials,
+    month, configured, monthlyIncome, minimumDebt, phuongCommitment, reserve, essentialsPlan:essentials,
     monthlyLivingCap, flexibleCap, currentEssential:sum(essential),
     currentFlexibleOrUnclassified:sum(flexible), freeFlexible:configured?freeFlexible:0,
     dailyFlexible:configured?Math.floor(freeFlexible/Math.max(1,daysLeft)):0,

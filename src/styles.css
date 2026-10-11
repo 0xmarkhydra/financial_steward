@@ -169,6 +169,65 @@
 .command-journal-item>span{font-size:12px;color:#457a8a;white-space:nowrap}
 .command-journal-error{padding:11px 13px;border-radius:10px;color:#ad4242;background:#fff0ec;font-size:12px}
 
+
+/* Conversational financial steward — accessible from every screen */
+.agent-dock{position:fixed;right:24px;bottom:25px;z-index:55}
+.agent-dock-trigger{display:flex;align-items:center;gap:10px;background:linear-gradient(120deg,#13987d,#137a9b);border:0;color:white;border-radius:99px;padding:15px 21px;box-shadow:0 14px 42px #116e7466;cursor:pointer;font-size:13px;font-weight:800}
+.agent-dock-trigger svg{flex-shrink:0}
+.agent-chat{display:flex;flex-direction:column;background:#fff;border:1px solid #dce9e7;border-radius:20px;overflow:hidden;box-shadow:0 17px 55px #18354920}
+.agent-chat-full{height:min(76vh,750px);min-height:520px}
+.agent-chat-compact{height:min(650px,calc(100dvh - 100px));width:min(400px,calc(100vw - 20px))}
+.agent-chat-header{display:flex;align-items:center;gap:11px;padding:17px 19px;background:linear-gradient(110deg,#ecfbf7,#f7fbfe);border-bottom:1px solid #e3eeec;flex-shrink:0}
+.agent-chat-avatar{display:grid;place-items:center;width:40px;height:40px;border-radius:13px;color:#fff;background:linear-gradient(135deg,#17ac90,#358ec1)}
+.agent-chat-header>div:nth-child(2){flex:1;display:grid;gap:5px}
+.agent-chat-header strong{font-size:13px;color:#233e4b}
+.agent-chat-header small{color:#6d8793;font-size:11px}
+.agent-online-indicator{display:inline-block;background:#3cc69b;width:7px;height:7px;border-radius:50%}
+.agent-chat-close{background:#fff;border:1px solid #dbe7e5;border-radius:8px;padding:7px;cursor:pointer;color:#597480}
+.agent-chat-messages{flex:1;overflow-y:auto;min-height:0;padding:18px;display:flex;flex-direction:column;gap:17px;background:linear-gradient(180deg,#fff,#f8fbfa)}
+.agent-chat-welcome{display:grid;justify-items:center;gap:12px;text-align:center;margin:auto;max-width:380px;padding:22px 7px}
+.agent-chat-symbol{width:61px;height:61px;display:grid;place-items:center;background:#dcf7ed;border-radius:20px;color:#0c9a80}
+.agent-chat-welcome h3{font-size:20px;line-height:1.3;color:#2b4352}
+.agent-chat-welcome p{font-size:12px;line-height:1.85;color:#698293}
+.agent-chat-examples{display:grid;gap:7px;width:100%;margin-top:8px}
+.agent-chat-examples span{display:block;text-align:left;border:1px solid #ddece8;border-radius:12px;padding:11px;font-size:11px;color:#597c7c;background:#fff}
+.agent-chat-bubble-wrap{display:grid;gap:5px;max-width:88%;align-self:flex-start}
+.agent-chat-bubble-wrap.user{align-self:flex-end}
+.agent-chat-bubble{padding:11px 14px;border-radius:14px 14px 14px 4px;background:#eff6f6;color:#2a4853;font-size:12px;line-height:1.85;white-space:pre-wrap;overflow-wrap:anywhere}
+.agent-chat-bubble.user{background:#168f7b;color:white;border-radius:14px 14px 4px 14px}
+.agent-chat-bubble-label{font-size:10px;color:#9baab5}
+.agent-chat-composer{padding:14px;border-top:1px solid #e2eae8;background:#fff;flex-shrink:0}
+.agent-chat-inputbox{display:flex;align-items:flex-end;gap:9px;background:#f8fbfa;border:1px solid #d6e4e2;border-radius:13px;padding:9px}
+.agent-chat-inputbox:focus-within{border-color:#43bca3;box-shadow:0 0 0 3px #22aa8c15}
+.agent-chat-inputbox textarea{flex:1;min-height:46px;max-height:140px;background:transparent;border:0;outline:0;resize:vertical;font:inherit;color:#233f4f;font-size:12px;padding:7px 3px}
+.agent-chat-inputbox button{display:grid;place-items:center;width:38px;height:38px;flex-shrink:0;background:#12a084;color:#fff;border:0;border-radius:10px;cursor:pointer}
+.agent-chat-inputbox button:disabled{opacity:.4;cursor:not-allowed}
+.agent-chat-foot{display:flex;align-items:center;gap:5px;font-size:10px;color:#8ca0a8;margin-top:10px;line-height:1.6}
+.phuong-panel{margin:0 0 18px}
+.phuong-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:18px}
+.phuong-panel-heading h2{font-size:18px}
+.phuong-panel-heading>span{color:#7c91a1;font-size:11px}
+.phuong-groups{display:grid;gap:12px}
+.phuong-card{border:1px solid #ddece6;border-radius:14px;padding:17px;background:#fbfefa}
+.phuong-card-top{display:flex;justify-content:space-between;gap:10px}
+.phuong-card-top h3{font-size:14px;color:#31504b}
+.phuong-card-top small{display:block;margin-top:6px;font-size:11px;color:#829b9a}
+.phuong-status{font-size:10px;color:#167a64;background:#e3f7ed;border-radius:20px;padding:6px 10px;align-self:flex-start;white-space:nowrap}
+.phuong-values{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:17px 0}
+.phuong-values>div{display:grid;gap:6px}.phuong-values span{font-size:11px;color:#829390}.phuong-values strong{color:#2d544a;font-size:15px}
+.phuong-note{font-size:11px;color:#798b93;line-height:1.7}
+.phuong-empty{padding:26px;display:grid;justify-items:center;text-align:center;gap:10px;color:#21a085}
+.phuong-empty strong{color:#3c5964}.phuong-empty p{max-width:550px;font-size:12px;color:#748998;line-height:1.8}
+.phuong-dues{display:grid;gap:9px}
+.phuong-due{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #e1ebe9;border-radius:11px}
+.phuong-due>div{display:grid;gap:6px}
+.phuong-due strong{font-size:12px;color:#2e4956}
+.phuong-due small{color:#8b9aa4;font-size:11px;line-height:1.5}
+.phuong-disclaimer{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;background:#fff8e9;border:1px solid #eedeae;border-radius:12px;color:#8b754e;font-size:11px;line-height:1.8}
+.phuong-disclaimer svg{flex-shrink:0}
+@media(max-width:760px){.agent-dock{bottom:calc(env(safe-area-inset-bottom) + 72px);right:11px}.agent-dock-trigger{padding:12px 16px}.agent-chat-full{height:calc(100dvh - 195px);min-height:360px}.agent-chat-compact{width:calc(100vw - 22px);height:min(68dvh,610px)}.phuong-values{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.agent-chat-messages{padding:12px}.agent-chat-bubble{font-size:12px}.phuong-card-top{flex-wrap:wrap}.phuong-due{flex-wrap:wrap}}
+
 /* Installable PWA controls — independent of authentication UI. */
 .pwa-network-status{position:fixed;z-index:55;inset:0 0 auto;display:flex;gap:9px;align-items:center;justify-content:center;padding:calc(10px + env(safe-area-inset-top)) 15px 10px;background:#fff3e6;border-bottom:1px solid #eed4ae;color:#825919;font-size:12px;font-weight:600;text-align:center;box-shadow:0 4px 14px #14243b0b}
 .pwa-network-status svg{flex-shrink:0}

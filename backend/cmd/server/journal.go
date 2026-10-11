@@ -56,6 +56,19 @@ func financeAuditRecords(d finance.Data) map[string]auditRecord {
 	for _, b := range d.Budgets {
 		add("budget", b.Category, "Ngân sách: "+b.Category, b.Limit, b)
 	}
+	groupNames := make(map[string]string, len(d.PhuongGroups))
+	for _, g := range d.PhuongGroups {
+		add("phuong_group", g.ID, "Dây phường: "+g.Name, g.Contribution, g)
+		groupNames[g.ID] = g.Name
+	}
+	for _, e := range d.PhuongEntries {
+		name := groupNames[e.GroupID]
+		if name == "" {
+			name = "Dây phường"
+		}
+		add("phuong_entry", e.ID, "Góp/lĩnh phường: "+name, e.Amount, e)
+	}
+	// Chat text is not replicated in the audit journal to minimize financial privacy exposure.
 	add("preferences", "main", "Cấu hình tài chính", 0, d.Preferences)
 	return out
 }

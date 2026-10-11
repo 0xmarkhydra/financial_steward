@@ -134,16 +134,28 @@ func mcpFinanceOutputAt(d finance.Data, tool string, now time.Time) any {
 				paid += v.Principal + v.Interest + v.Fee
 			}
 		}
+		phuongIn, phuongOut := 0.0, 0.0
+		for _, entry := range d.PhuongEntries {
+			if len(entry.Date) < 7 || entry.Date[:7] != month {
+				continue
+			}
+			if entry.Kind == "payout" {
+				phuongIn += entry.Amount
+			} else {
+				phuongOut += entry.Amount
+			}
+		}
 		return map[string]any{
 			"currency": "VND", "asOf": today, "debtBalance": debtTotal,
 			"monthlyDebtMinimum": minTotal, "monthIncomeRecorded": income,
 			"monthExpenseRecorded": expense, "monthDebtPaid": paid,
-			"monthNetRecorded": income - expense - paid,
+			"phuongCashReceived": phuongIn, "phuongCashPaid": phuongOut,
+			"monthNetRecorded": income + phuongIn - expense - paid - phuongOut,
 			"note":             "Recorded transactions only; not a verified bank balance.",
 		}
 	}
 	if tool == "suggest_spending_budget" {
-		rawAvailable := d.Preferences.MonthlyIncome - d.Preferences.Essentials - d.Preferences.Reserve - minTotal
+		rawAvailable := d.Preferences.MonthlyIncome - d.Preferences.Essentials - d.Preferences.Reserve - minTotal - monthlyPhuongCommitment(d, now)
 		available := rawAvailable
 		if available < 0 {
 			available = 0
@@ -157,6 +169,7 @@ func mcpFinanceOutputAt(d finance.Data, tool string, now time.Time) any {
 			"essentialsAssumed":          d.Preferences.Essentials,
 			"reserveAssumed":             d.Preferences.Reserve,
 			"minimumDebtPayments":        minTotal,
+			"phuongCommitmentThisMonth":  monthlyPhuongCommitment(d, now),
 			"discretionaryMonthlyBudget": available,
 			"minimumPaymentShortfall":    shortfall,
 			"warning":                    "Estimates depend on manually entered data. A minimum credit-card payment may be less than the full statement balance.",

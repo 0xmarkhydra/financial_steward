@@ -53,7 +53,8 @@ func spendingBehaviorMCP(d finance.Data, now time.Time, minimumDebt float64) any
 	income := d.Preferences.MonthlyIncome
 	reserve := d.Preferences.Reserve
 	essentials := d.Preferences.Essentials
-	available := math.Max(0, income-reserve-minimumDebt)
+	phuongDue := monthlyPhuongCommitment(d, now)
+	available := math.Max(0, income-reserve-minimumDebt-phuongDue)
 	flexibleCap := math.Max(0, available-essentials)
 	excessEssentials := math.Max(0, essentialSpent-essentials)
 	remaining := math.Max(0, flexibleCap-flexibleSpent-excessEssentials)
@@ -95,7 +96,7 @@ func spendingBehaviorMCP(d finance.Data, now time.Time, minimumDebt float64) any
 	return map[string]any{
 		"asOf": today, "currency": "VND", "month": month,
 		"configuredIncome": income > 0, "monthlyIncomeAssumed": income,
-		"minimumDebtPayments": minimumDebt, "reserveAssumed": reserve, "essentialsAssumed": essentials,
+		"minimumDebtPayments": minimumDebt, "phuongCommitmentThisMonth": phuongDue, "reserveAssumed": reserve, "essentialsAssumed": essentials,
 		"estimatedFlexibleMonthlyLimit": flexibleCap, "estimatedFlexibleRemaining": remaining,
 		"estimatedFlexibleDailyLimit": dayLimit, "daysLeft": daysLeft,
 		"essentialSpentRecorded": essentialSpent, "flexibleOrUnclassifiedSpent": flexibleSpent,

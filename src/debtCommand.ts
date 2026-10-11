@@ -1,8 +1,9 @@
 import type { FinanceData, Debt } from './types';
 import { addMonths, daysUntil, localISO, monthKey, monthStats, money, total } from './finance';
 import { analyzeSpending } from './spendingCoach';
+import {phuongDues} from './phuong';
 
-export type ReminderKind = 'debt' | 'interest' | 'rollover' | 'budget';
+export type ReminderKind = 'debt' | 'interest' | 'rollover' | 'budget' | 'phuong';
 export type Severity = 'overdue' | 'urgent' | 'upcoming' | 'info';
 export interface FinanceReminder {
   id:string;
@@ -13,12 +14,12 @@ export interface FinanceReminder {
   days?:number;
   amount?:number;
   detail:string;
-  target:'debts'|'rollovers'|'budgets'|'coach';
+  target:'debts'|'rollovers'|'budgets'|'coach'|'phuong';
 }
 export interface LedgerEvent {
   id:string;
   date:string;
-  kind:'income'|'expense'|'payment'|'rollover'|'debt';
+  kind:'income'|'expense'|'payment'|'rollover'|'debt'|'phuong';
   title:string;
   amount:number;
   direction:'in'|'out'|'planned'|'record';
@@ -130,6 +131,14 @@ export function financeReminders(data:FinanceData,asOf=localISO()):FinanceRemind
         detail:'Đã dùng '+money(used)+' / '+money(coach.flexibleCap)+' theo thu nhập và nghĩa vụ khai báo. Chọn Thói quen chi tiêu để điều chỉnh hành vi.'});
     }
   }
+  for(const item of phuongDues(data,asOf)){
+    const group=(data.phuongGroups||[]).find(g=>g.id===item.groupId);
+    if(!group)continue;
+    out.push({id:'phuong:'+item.id,kind:'phuong',severity:scoreDue(item.days),date:item.date,days:item.days,
+      title:(item.kind==='contribution'?'Đóng phường: ':'Lĩnh phường dự kiến: ')+group.name+' kỳ '+item.round,
+      amount:item.amount,target:'phuong',
+      detail:item.kind==='contribution'?'Khoản góp chưa đủ bản ghi thanh toán. Phải đối chiếu thực tế trước khi kết luận quá hạn.':'Tiền lĩnh dự kiến, không phải lãi hay số dư đã nhận.'});
+  }
   const rank:Record<Severity,number>={overdue:0,urgent:1,upcoming:2,info:3};
   return out.sort((a,b)=>rank[a.severity]-rank[b.severity]||(a.date||'9999').localeCompare(b.date||'9999')||a.title.localeCompare(b.title));
 }
@@ -155,6 +164,13 @@ export function financialLedger(data:FinanceData):LedgerEvent[]{
     note:t.note,sourceId:t.id,
     ...(t.type==='expense'?{review:reviewExpense(t,data.preferences.monthlyIncome)}:{})
   });
+  for(const e of data.phuongEntries||[]){
+    const group=(data.phuongGroups||[]).find(g=>g.id===e.groupId);
+    records.push({id:'phuong:'+e.id,date:e.date,kind:'phuong',sourceId:e.id,
+      title:(e.kind==='payout'?'Lĩnh phường: ':e.kind==='fee'?'Phí phường: ':'Góp phường: ')+(group?.name||'Dây phường')+' · kỳ '+e.round,
+      amount:e.amount,direction:e.kind==='payout'?'in':'out',
+      detail:e.kind==='payout'?'Tiền đã lĩnh, không phải lợi nhuận':e.kind==='fee'?'Phí thực trả':'Tiền đã góp thực tế',note:e.note});
+  }
   for(const p of data.payments)records.push({
     id:'pay:'+p.id,date:p.date,kind:'payment',title:'Trả nợ: '+(debtNames.get(p.debtId)||'Khoản nợ'),
     amount:p.principal+p.interest+p.fee,direction:'out',sourceId:p.id,

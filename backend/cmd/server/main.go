@@ -214,15 +214,26 @@ func (a *server) middleware(next http.Handler) http.Handler {
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
 		origin := r.Header.Get("Origin")
 		if origin != "" {
-			if !a.origins[origin] {
+			switch {
+			case a.origins[origin]:
+				// Only configured first-party web origins receive CORS access.
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
+				w.Header().Set("Access-Control-Allow-Headers", "Authorization,Content-Type")
+				w.Header().Set("Access-Control-Max-Age", "600")
+				w.Header().Set("Vary", "Origin")
+			case r.URL.Path == "/oauth/authorize" && r.Method == http.MethodGet:
+				// OAuth opens as a top-level cross-site navigation from ChatGPT.
+				// No CORS headers are emitted: scripts at that origin still cannot
+				// fetch the consent page or protected API data.
+			case r.URL.Path == "/oauth/authorize" && r.Method == http.MethodPost && origin == oauthOrigin():
+				// Browser form submissions to the authorization server itself
+				// carry its Origin, not the frontend's CORS_ORIGINS value.
+				// This exception applies ONLY to the OAuth consent form.
+			default:
 				fail(w, http.StatusForbidden, "Nguồn truy cập không được cho phép.")
 				return
 			}
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Authorization,Content-Type")
-			w.Header().Set("Access-Control-Max-Age", "600")
-			w.Header().Set("Vary", "Origin")
 		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)

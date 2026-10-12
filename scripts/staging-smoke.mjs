@@ -1,6 +1,6 @@
 // Integration smoke test for isolated Railway staging. Uses disposable account, removes it in finally.
 // Usage: node scripts/staging-smoke.mjs
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 
 const origin = process.env.SMOKE_WEB_URL || 'https://quan-gia.codelocal.cloud';
 const api = process.env.SMOKE_API_URL || 'https://api-quan-gia.codelocal.cloud';
@@ -33,6 +33,7 @@ async function request(path, method = 'GET', body, auth = token, headers = {}) {
   return { status: response.status, headers: response.headers, data };
 }
 let state;
+let oauthFlow;
 try {
   await check('API health', async () => {
     const r=await request('/healthz');
@@ -84,6 +85,33 @@ try {
       grant_types:['authorization_code','refresh_token'],response_types:['code']},'');
     expected(good.status===201&&good.data.client_id&&good.data.token_endpoint_auth_method==='none',
       'ChatGPT dynamic client registration failed '+good.status);
+    const codeVerifier=randomBytes(48).toString('base64url');
+    const codeChallenge=createHash('sha256').update(codeVerifier).digest('base64url');
+    const authorizationUrl=new URL(api+'/oauth/authorize');
+    for(const [name,value] of Object.entries({
+      response_type:'code',client_id:good.data.client_id,
+      redirect_uri:'https://chatgpt.com/connector_platform_oauth_redirect',
+      scope:'finance:read',state:randomBytes(16).toString('hex'),
+      code_challenge_method:'S256',code_challenge:codeChallenge,resource:api+'/mcp'
+    }))authorizationUrl.searchParams.set(name,value);
+    const browser=await fetch(authorizationUrl,{headers:{Origin:'https://chatgpt.com','Sec-Fetch-Mode':'navigate','Sec-Fetch-Dest':'document'},
+      redirect:'manual',signal:AbortSignal.timeout(12000)});
+    const consent=await browser.text();
+    expected(browser.status===200&&consent.includes('Đăng nhập và cấp quyền đọc'),
+      'ChatGPT cannot navigate to consent page: HTTP '+browser.status+' '+consent.slice(0,180));
+    expected(!browser.headers.get('access-control-allow-origin'),'Cross-origin consent GET must not enable CORS');
+    oauthFlow={clientId:good.data.client_id,verifier:codeVerifier,state:authorizationUrl.searchParams.get('state'),requestId:consent.match(/name="request_id" value="([^"]+)"/)?.[1]};
+    expected(Boolean(oauthFlow.requestId),'OAuth consent request id missing');
+    const sameOriginForm=await fetch(api+'/oauth/authorize',{method:'POST',
+      headers:{Origin:api,'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({request_id:'invalid',consent:'yes'}),
+      redirect:'manual',signal:AbortSignal.timeout(12000)});
+    expected(sameOriginForm.status===400,'Self-origin OAuth form should reach validation instead of CORS: '+sameOriginForm.status);
+    const crossSiteForm=await fetch(api+'/oauth/authorize',{method:'POST',
+      headers:{Origin:'https://chatgpt.com','Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({request_id:'invalid',consent:'yes'}),
+      redirect:'manual',signal:AbortSignal.timeout(12000)});
+    expected(crossSiteForm.status===403,'Cross-site OAuth form must remain blocked');
     const malicious=await request('/oauth/register','POST',{client_name:'Untrusted redirect',
       redirect_uris:['https://chatgpt.com.evil.test/callback']},'');
     expected(malicious.status===400,'Untrusted OAuth callback URL was accepted');

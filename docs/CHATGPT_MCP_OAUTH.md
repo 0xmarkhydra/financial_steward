@@ -6,6 +6,18 @@ Thông báo **“Không thể tự động xác định cài đặt OAuth”** x
 
 Ngoài ra, Railway có thể hiển thị tên miền `api-quan-gia.codelocal.cloud` với cảnh báo DNS `DNS_RECORD_STATUS_REQUIRES_UPDATE` dù chứng chỉ TLS hợp lệ. Cần kiểm tra Cloudflare DNS: CNAME host `api-quan-gia` trỏ tới `9g6da5hd.up.railway.app` (giá trị do Railway hiển thị 12/10/2026; luôn đối chiếu lại ở Railway trước khi sửa).
 
+## Sự cố 403 khi ChatGPT chuyển đến trang đăng nhập (12/10/2026)
+
+Trước khi sửa, `GET /oauth/authorize` mang header `Origin: https://chatgpt.com` bị middleware chặn vì `CORS_ORIGINS` chỉ dành cho website tài chính, dẫn đến thông báo **“Nguồn truy cập không được cho phép.”**. Khi biểu mẫu OAuth gửi POST về origin API, lớp CORS cũng có thể chặn nhầm.
+
+Đã chỉnh **chỉ tại OAuth authorization endpoint**:
+- Cho phép `GET /oauth/authorize` khi được mở qua điều hướng từ origin ngoài; **không** trả header `Access-Control-Allow-Origin`, nên trang web khác vẫn không được dùng JavaScript đọc nội dung.
+- Cho phép `POST /oauth/authorize` từ đúng `MCP_PUBLIC_ORIGIN` để gửi form cấp quyền.
+- Không nới CORS cho `/api/v1/*`, `/mcp`, `/oauth/token` hoặc request POST OAuth từ origin lạ.
+- Có regression test tại `backend/cmd/server/oauth_origin_test.go` và staging smoke tái hiện Origin ChatGPT, xác thực HTML consent và chặn CORS không mong muốn.
+
+Đã triển khai lại service Go API tại `https://api-quan-gia.codelocal.cloud` và chạy **20/20 smoke tests**. Vẫn cần xác nhận luồng đầy đủ khi kết nối qua giao diện ChatGPT thật.
+
 ## Cơ chế backend đã code
 
 - `GET /.well-known/oauth-protected-resource` và `GET /.well-known/oauth-protected-resource/mcp`: RFC 9728, liên kết issuer và MCP resource.
